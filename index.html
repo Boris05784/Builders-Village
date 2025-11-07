@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Builder’s Village – Binnenkort Beschikbaar</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+    }
+    #start-scherm {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 200;
+      text-align: center;
+    }
+    .pulse {
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.05); opacity: 0.8; }
+    }
+  </style>
+</head>
+<body>
+  <div id="start-scherm">
+    <div class="p-8">
+      <h1 class="text-6xl font-extrabold mb-4 pulse">🏗️ Builder’s Village</h1>
+      <p class="text-xl mb-6">Welkom, Burgemeester!<br>We bouwen nog even verder aan jouw stadssimulator.</p>
+      <div class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg text-2xl transition-all duration-200 transform hover:scale-105 inline-block">
+        Binnenkort beschikbaar op buildersvillage.nl
+      </div>
+      <p class="mt-6 text-sm opacity-70">© 2025 Boris – Alle rechten voorbehouden</p>
+    </div>
+  </div>
+</body>
+</html>
