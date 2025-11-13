@@ -532,6 +532,50 @@
             </button>
         </div>
     </div>
+    <!-- Desktop-only waarschuwing voor mobiele apparaten -->
+    <div id="mobile-warning"
+        class="fixed inset-0 bg-black bg-opacity-80 z-300 flex items-center justify-center p-6 hidden">
+        <div class="bg-white rounded-xl p-6 max-w-sm w-full text-center">
+            <h2 class="text-2xl font-bold mb-2">Beste gebruiker</h2>
+            <p class="mb-4">Dit spel is alleen ontworpen voor desktop/laptop. Gebruik svp een computer voor de beste
+                ervaring.</p>
+            <button id="mobile-dismiss" class="mt-2 bg-indigo-600 text-white py-2 px-4 rounded-lg">Sluiten (alleen
+                lezen)</button>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const el = document.getElementById('mobile-warning');
+            const dismiss = document.getElementById('mobile-dismiss');
+
+            // 1) Detectie: combineer schermgrootte en userAgent voor betrouwbare detectie
+            const isNarrow = Math.max(window.screen.width, window.screen.height) < 900; // mobiel/klein tablet
+            const ua = navigator.userAgent || navigator.vendor || window.opera;
+            const isMobileUA = /Android|iPhone|iPad|iPod|Windows Phone|Mobi/i.test(ua);
+
+            // 2) Toon alleen als we mobiel vermoeden (niet tonen op laptops/desktops)
+            if (isNarrow && isMobileUA) {
+                el.classList.remove('hidden');
+            }
+
+            // 3) Optioneel: allow user to dismiss for a short time (local session)
+            dismiss.addEventListener('click', () => {
+                el.classList.add('hidden');
+                // Optioneel: onthoud dat gebruiker toestemming gaf voor deze sessie
+                sessionStorage.setItem('mobileWarningDismissed', '1');
+            });
+
+            // Respect dismiss als gebruiker dat eerder deed deze sessie
+            if (sessionStorage.getItem('mobileWarningDismissed') === '1') {
+                el.classList.add('hidden');
+            }
+
+            // 4) Extra: je kunt ook het hele spel uitschakelen op mobiel door dit event te gebruiken
+            // if (!el.classList.contains('hidden')) { /* disable game start buttons, inputs, etc. */ }
+        })();
+    </script>
+
 
     <!-- DAG/NACHT OVERLAY -->
     <div id="night-overlay"></div>
