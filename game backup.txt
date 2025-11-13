@@ -1,0 +1,3248 @@
+<!DOCTYPE html>
+<html lang="nl">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- TITEL GEWIJZIGD -->
+    <title>Builder’s Village</title>
+    <!-- Laad Tailwind CSS voor een modern uiterlijk -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Laad Tone.js voor geluidseffectEN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+
+    <style>
+        /* Aangepaste styling voor het spel */
+
+        /* Basis setup */
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Zorgt voor soepele overgang dag/nacht */
+            transition: background-color 0.5s ease-in-out;
+        }
+
+        /* --- NIEUW: Kaart Container & Slepen --- */
+        #board-container {
+            position: relative;
+            flex-grow: 1;
+            /* Neemt de beschikbare ruimte */
+            min-height: 80vh;
+            /* Zorgt voor een minimale hoogte */
+            overflow: hidden;
+            /* Verbergt alles wat buiten de container valt */
+            background-color: #15803d;
+            /* Donkergroen (gras) */
+            background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            /* Subtiel grid */
+            cursor: grab;
+            /* Sleep-cursor */
+        }
+
+        body.is-dragging {
+            cursor: grabbing !important;
+        }
+
+        /* Voorkom dat slots geklikt worden tijdens het slepen */
+        body.is-dragging .slot {
+            pointer-events: none;
+        }
+
+        #board {
+            position: absolute;
+            /* Essentieel voor pannen */
+            width: 2500px;
+            height: 2000px;
+            background-color: transparent;
+            /* De container heeft nu de achtergrondkleur */
+            transform-origin: 0 0;
+            /* transform: translate(0px, 0px); -- Wordt door JS beheerd */
+        }
+
+        /* Verberg scrollbars (voor het geval ze verschijnen) */
+        #board-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        #board-container {
+            -ms-overflow-style: none;
+            /* IE en Edge */
+            scrollbar-width: none;
+            /* Firefox */
+        }
+
+        /* --- Styling voor de bouw-slots --- */
+        .slot {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s, background-color 0.2s;
+            position: absolute;
+            /* Slots gebruiken nu absolute pixel-positionering */
+            width: 80px;
+            height: 80px;
+            background-color: rgba(255, 255, 255, 0.7);
+            border: 2px dashed #909090;
+            border-radius: 0.75rem;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Effecten bij hoveren op een leeg slot */
+        .slot:hover:not(.occupied) {
+            transform: scale(1.05);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+            background-color: rgba(255, 255, 255, 0.9);
+        }
+
+        /* Stijl voor een bezet slot */
+        .occupied {
+            border: 2px solid #166534;
+            background-color: rgba(255, 255, 255, 0.95);
+            font-size: 2.5rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        /* NIEUW: Gebouw heeft geen stroom/water/afval */
+        .occupied.no-power {
+            border-color: #dc2626;
+            /* Rood */
+            background-color: #fee2e2;
+            animation: pulse-danger 2s infinite;
+        }
+
+        .occupied.no-power::after {
+            content: '⚡️';
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            font-size: 1rem;
+            background: #dc2626;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 5px #dc2626;
+        }
+
+        /* --- NIEUW: Styling voor NOODGEVALLEN --- */
+        .occupied.emergency-marker::before {
+            position: absolute;
+            top: -12px;
+            left: -12px;
+            font-size: 1.25rem;
+            background: #dc2626;
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 10px #dc2626;
+            animation: pulse-emergency-icon 1s infinite;
+            z-index: 25;
+        }
+
+        .occupied.on-fire {
+            animation: pulse-danger 1s infinite;
+        }
+
+        .occupied.on-fire::before {
+            content: '🔥';
+        }
+
+        .occupied.crime {
+            background-color: #eef2ff;
+            /* Lichtblauw */
+            border-color: #3b82f6;
+            animation: pulse-crime 2s infinite;
+        }
+
+        .occupied.crime::before {
+            content: '🚓';
+            background: #3b82f6;
+            /* Blauw */
+            box-shadow: 0 0 10px #3b82f6;
+        }
+
+        .occupied.medical {
+            background-color: #f0fdf4;
+            /* Lichtgroen */
+            border-color: #22c55e;
+            animation: pulse-medical 2s infinite;
+        }
+
+        .occupied.medical::before {
+            content: '🚑';
+            /* Ambulance emoji, hoewel 🏥 (ziekenhuis) ook kan */
+            background: #22c55e;
+            /* Groen */
+            box-shadow: 0 0 10px #22c55e;
+        }
+
+
+        @keyframes pulse-danger {
+
+            0%,
+            100% {
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            }
+
+            50% {
+                box-shadow: 0 4px 15px rgba(220, 38, 38, 0.5);
+            }
+        }
+
+        @keyframes pulse-crime {
+
+            0%,
+            100% {
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            }
+
+            50% {
+                box-shadow: 0 4px 15px rgba(59, 130, 246, 0.5);
+            }
+        }
+
+        @keyframes pulse-medical {
+
+            0%,
+            100% {
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            }
+
+            50% {
+                box-shadow: 0 4px 15px rgba(34, 197, 94, 0.5);
+            }
+        }
+
+        @keyframes pulse-emergency-icon {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+        }
+
+        /* --- Einde Noodgeval Styling --- */
+
+
+        .occupied:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+
+        /* Level badge op een gebouw */
+        .level-badge {
+            font-size: 0.75rem;
+            /* 12px */
+            font-weight: bold;
+            color: white;
+            background-color: #ca8a04;
+            /* Goud/Geel */
+            padding: 2px 6px;
+            border-radius: 9999px;
+            /* Pilvorm */
+            margin-top: -5px;
+            user-select: none;
+        }
+
+        /* Sloop-modus styling */
+        .sloop-modus-actief .slot.occupied:hover {
+            background-color: #fee2e2;
+            /* Lichtrood */
+            border-color: #dc2626;
+            /* Rood */
+            cursor: crosshair;
+        }
+
+        #sloop-toggle.active {
+            background-color: #dc2626 !important;
+            /* Rood */
+            color: white !important;
+            box-shadow: 0 0 15px rgba(220, 38, 38, 0.7);
+        }
+
+        /* --- NIEUW: Bouwmenu Tabs --- */
+        #build-tabs .tab-button {
+            transition: all 0.2s ease-in-out;
+            border-bottom-width: 3px;
+            border-color: transparent;
+            padding-bottom: 8px;
+            margin-bottom: -2px;
+            /* Overlapt de border-b van de container */
+        }
+
+        #build-tabs .tab-button.active {
+            border-color: #4f46e5;
+            /* Indigo */
+            color: #4f46e5;
+            font-weight: 600;
+        }
+
+        #build-panels .build-panel {
+            display: none;
+            /* Standaard verborgen */
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        #build-panels .build-panel.active {
+            display: flex;
+            /* Actief paneel tonen */
+        }
+
+        /* --- NIEUW: Resource Stats Styling --- */
+        .resource-bar {
+            transition: all 0.3s ease-in-out;
+        }
+
+        .resource-bar.over-capacity {
+            background-color: #fee2e2 !important;
+            /* Lichtrood */
+            color: #b91c1c !important;
+            /* Donkerrood */
+            animation: pulse-warning 1.5s infinite ease-in-out;
+        }
+
+        @keyframes pulse-warning {
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+
+            50% {
+                transform: scale(1.02);
+                box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1), 0 0 10px rgba(220, 38, 38, 0.5);
+            }
+        }
+
+
+        /* Modale overlay (onveranderd) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90%;
+            overflow-y: auto;
+            transform: translateY(-20px);
+            transition: transform 0.3s ease-in-out;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-overlay.active .modal-content {
+            transform: translateY(0);
+        }
+
+        /* Dag/Nacht-cyclus (onveranderd) */
+        #night-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000033;
+            opacity: 0;
+            mix-blend-mode: multiply;
+            pointer-events: none;
+            z-index: 100;
+            transition: opacity 2s ease-in-out;
+        }
+
+        #night-overlay.is-night {
+            opacity: 0.6;
+        }
+
+        /* Startscherm (onveranderd) */
+        #start-scherm {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+            color: white;
+            text-align: center;
+        }
+
+        /* Wegen (nu pixel-based) */
+        .road {
+            position: absolute;
+            background-color: #4b5563;
+            /* Gray-700 */
+            border-top: 2px dashed #9ca3af;
+            /* Gray-400 */
+            border-bottom: 2px dashed #9ca3af;
+            opacity: 0.8;
+            z-index: 5;
+            /* Onder slots */
+        }
+
+        .road.vertical {
+            border-top: none;
+            border-bottom: none;
+            border-left: 2px dashed #9ca3af;
+            border-right: 2px dashed #9ca3af;
+        }
+
+        /* Auto's (geüpdatet voor pixel-wegen) */
+        .car {
+            position: absolute;
+            font-size: 2rem;
+            z-index: 15;
+            /* Boven wegen, onder slots */
+        }
+
+        /* --- NIEUW: Hulpvoertuigen --- */
+        .emergency-vehicle {
+            position: absolute;
+            font-size: 2.5rem;
+            /* Iets groter */
+            z-index: 30;
+            /* Boven alles behalve modals */
+            text-shadow: 0 0 5px white;
+            transition: transform 0.2s;
+            /* Voor 'wiebelen' */
+        }
+
+        @keyframes drive-horizontal-ltr {
+            from {
+                transform: translateX(-100px);
+            }
+
+            to {
+                transform: translateX(2550px);
+            }
+
+            /* 2500px map + 50px */
+        }
+
+        @keyframes drive-horizontal-rtl {
+            from {
+                transform: translateX(2550px) scaleX(-1);
+            }
+
+            to {
+                transform: translateX(-100px) scaleX(-1);
+            }
+        }
+
+        @keyframes drive-vertical-ttb {
+            from {
+                transform: translateY(-100px);
+            }
+
+            to {
+                transform: translateY(2050px);
+            }
+
+            /* 2000px map + 50px */
+        }
+
+        @keyframes drive-vertical-btt {
+            from {
+                transform: translateY(2050px) scaleY(-1);
+            }
+
+            to {
+                transform: translateY(-100px) scaleY(-1);
+            }
+        }
+
+        /* Pas animaties toe op de auto's */
+        .car-1 {
+            top: 510px;
+            animation: drive-horizontal-ltr 15s linear infinite;
+        }
+
+        .car-2 {
+            top: 1210px;
+            animation: drive-horizontal-rtl 12s linear infinite;
+        }
+
+        .car-3 {
+            left: 610px;
+            animation: drive-vertical-ttb 18s linear infinite;
+        }
+
+        .car-4 {
+            left: 1810px;
+            animation: drive-vertical-btt 20s linear infinite;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 flex flex-col min-h-screen font-sans">
+
+    <!-- START SCHERM (Over het hele spel) -->
+    <div id="start-scherm">
+        <div class="p-8">
+            <h1 class="text-6xl font-extrabold mb-4">🏗️ Builder’s Village</h1>
+            <p class="text-xl mb-8">Welkom, Burgemeester! Bouw je stad, beheer je bronnen en houd je burgers tevreden.
+            </p>
+            <button id="start-knop"
+                class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg text-2xl transition-all duration-200 transform hover:scale-105">
+                Start Spel
+            </button>
+        </div>
+    </div>
+
+    <!-- DAG/NACHT OVERLAY -->
+    <div id="night-overlay"></div>
+
+    <!-- CONTROLEPANEEL BOVENAAN -->
+    <div id="controls"
+        class="p-4 bg-white shadow-xl flex flex-col sm:flex-row justify-between items-center gap-4 sticky top-0 z-40 border-b-4 border-indigo-400">
+
+        <!-- Linker kant: Stats -->
+        <div class="flex flex-wrap justify-center gap-4">
+            <div id="money"
+                class="text-2xl font-extrabold text-green-700 bg-green-50 px-4 py-2 rounded-xl shadow-inner">
+                Saldo: €5000</div>
+            <div id="happiness"
+                class="text-2xl font-extrabold text-yellow-600 bg-yellow-50 px-4 py-2 rounded-xl shadow-inner transition-colors duration-500">
+                Geluk: 50 / 100</div>
+            <div id="day-time"
+                class="text-2xl font-extrabold text-blue-700 bg-blue-50 px-4 py-2 rounded-xl shadow-inner">
+                Tijd: ☀️ Dag
+            </div>
+        </div>
+
+        <!-- NIEUW: Midden: Resource Stats -->
+        <div id="resources" class="flex flex-wrap justify-center gap-2">
+            <div id="power-stats"
+                class="resource-bar text-lg font-bold text-yellow-700 bg-yellow-50 px-3 py-1 rounded-xl shadow-inner"
+                title="Stroom (Verbruik / Capaciteit)">
+                ⚡️ 0 / 0
+            </div>
+            <div id="water-stats"
+                class="resource-bar text-lg font-bold text-blue-700 bg-blue-50 px-3 py-1 rounded-xl shadow-inner"
+                title="Water (Verbruik / Capaciteit)">
+                💧 0 / 0
+            </div>
+            <div id="waste-stats"
+                class="resource-bar text-lg font-bold text-gray-700 bg-gray-100 px-3 py-1 rounded-xl shadow-inner"
+                title="Afval (Productie / Capaciteit)">
+                🗑️ 0 / 0
+            </div>
+        </div>
+
+        <!-- Rechter kant: Knoppen -->
+        <div class="flex gap-2">
+            <button onclick="UIManager.openModal('finance')"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition-all duration-200">
+                Financiën 💰
+            </button>
+            <button onclick="UIManager.openModal('population')"
+                class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition-all duration-200">
+                Bevolking 😊
+            </button>
+            <button id="sloop-toggle" onclick="GameLogic.toggleSloopMode()"
+                class="bg-gray-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition-all duration-200">
+                Sloop Modus 🏗️
+            </button>
+        </div>
+    </div>
+
+    <!-- NIEUW: BOUWMENU (Tabs) -->
+    <div id="build-menu" class="p-4 bg-gray-50 border-b shadow-md z-30">
+        <!-- Tab Knoppen -->
+        <div id="build-tabs" class="flex flex-wrap justify-center gap-4 border-b-2 border-gray-200 pb-2 mb-3">
+            <!-- Wordt gevuld door JS -->
+        </div>
+        <!-- Tab Panelen -->
+        <div id="build-panels">
+            <!-- Wordt gevuld door JS -->
+        </div>
+    </div>
+
+
+    <!-- NIEUW: HET SPELBORD CONTAINER (voor slepen) -->
+    <div id="board-container">
+        <!-- HET SPELBORD (nu groter en absoluut gepositioneerd) -->
+        <div id="board">
+            <!-- Wegen (Pixel-based) -->
+            <div class="road vertical" style="left: 600px; top: 0; width: 64px; height: 2000px;"></div>
+            <div class="road vertical" style="left: 1800px; top: 0; width: 64px; height: 2000px;"></div>
+            <div class="road horizontal" style="left: 0; top: 500px; width: 2500px; height: 64px;"></div>
+            <div class="road horizontal" style="left: 0; top: 1200px; width: 2500px; height: 64px;"></div>
+
+            <!-- NIEUWE WEGEN HIERTOEGEVOEGD -->
+            <div class="road vertical" style="left: 1200px; top: 0; width: 64px; height: 2000px;"></div>
+            <div class="road horizontal" style="left: 0; top: 900px; width: 2500px; height: 64px;"></div>
+            <div class="road horizontal" style="left: 0; top: 1700px; width: 2500px; height: 64px;"></div>
+
+            <!-- MEER NIEUWE WEGEN TOEGEVOEGD -->
+            <div class="road vertical" style="left: 900px; top: 0; width: 64px; height: 2000px;"></div>
+            <div class="road vertical" style="left: 1500px; top: 0; width: 64px; height: 2000px;"></div>
+            <div class="road horizontal" style="left: 0; top: 250px; width: 2500px; height: 64px;"></div>
+            <div class="road horizontal" style="left: 0; top: 700px; width: 2500px; height: 64px;"></div>
+            <div class="road horizontal" style="left: 0; top: 1450px; width: 2500px; height: 64px;"></div>
+
+            <!-- Geanimeerde Auto's -->
+            <div class="car car-1">🚗</div>
+            <div class="car car-2">🚙</div>
+            <div class="car car-3">🚌</div>
+            <div class="car car-4">🚓</div>
+
+            <!-- NIEUWE AUTO'S HIERTOEGEVOEGD -->
+            <div class="car" style="left: 1210px; animation: drive-vertical-btt 16s linear infinite 3s;">🚕</div>
+            <div class="car" style="top: 910px; animation: drive-horizontal-rtl 14s linear infinite 2s;">🚑</div>
+            <div class="car" style="top: 1710px; animation: drive-horizontal-ltr 17s linear infinite 1s;">🚚</div>
+
+            <!-- MEER NIEUWE AUTO'S TOEGEVOEGD -->
+            <div class="car" style="left: 910px; animation: drive-vertical-ttb 17s linear infinite 4s;">🚓</div>
+            <div class="car" style="left: 1510px; animation: drive-vertical-btt 15s linear infinite 5s;">🚙</div>
+            <div class="car" style="top: 260px; animation: drive-horizontal-ltr 13s linear infinite 6s;">🚗</div>
+            <div class="car" style="top: 710px; animation: drive-horizontal-rtl 18s linear infinite 7s;">🚌</div>
+            <div class="car" style="top: 1460px; animation: drive-horizontal-ltr 16s linear infinite 8s;">🚕</div>
+
+            <!-- Slots worden dynamisch toegevoegd (z-index 20) -->
+            <!-- Hulpvoertuigen worden hier dynamisch toegevoegd (z-index 30) -->
+        </div>
+    </div>
+
+    <!-- BERICHTENBOX (Pop-up) -->
+    <div id="message-box"
+        class="fixed bottom-4 right-4 bg-indigo-600 text-white p-3 rounded-xl shadow-2xl hidden z-50 transition-opacity duration-300 flex items-center gap-2">
+    </div>
+
+    <!-- MODALE OVERLAY (voor Financiën, Bevolking, Upgrades) -->
+    <div id="stats-modal" class="modal-overlay" onclick="UIManager.closeModal(event)">
+        <div id="modal-content" class="modal-content" onclick="event.stopPropagation()">
+            <!-- Inhoud wordt hier geladen door JS -->
+        </div>
+    </div>
+
+    <!-- ================================================================================================================== -->
+    <!-- GROTE JAVASCRIPT SECTIE (Volledig herschreven) -->
+    <!-- ================================================================================================================== -->
+    <script type="module">
+        /**
+         * =================================================================
+         * Builder’s Village - Uitgebreide JavaScript Logica
+         * Sectie 1: Constanten en Data Definities
+         * =================================================================
+         */
+
+        /**
+         * @typedef {Object} BuildingData
+         * @property {string} name - De Nederlandse naam van het gebouw.
+         * @property {string} description - Korte omschrijving.
+         * @property {number} cost - De bouwkosten in €.
+         * @property {string} emoji - De emoji die het gebouw representeert.
+         * @property {string} category - De bouw-categorie (e.g., 'woning').
+         * @property {number} happinessEffect - Het effect op geluk (positief of negatief).
+         * @property {number} income - De basis-inkomsten per tick.
+         * @property {number} population - Hoeveel bevolking dit gebouw toevoegt.
+         * @property {string|null} upgradeTo - De key van het gebouw waar dit naar upgrade.
+         * @property {number|null} refundPercentage - Afwijkend teruggavepercentage (standaard 0.5).
+         *
+         * --- NIEUWE BRON-EIGENSCHAPPEN ---
+         * @property {number} powerUsage - Hoeveel stroom verbruikt (per tick).
+         * @property {number} waterUsage - Hoeveel water verbruikt (per tick).
+         * @property {number} wasteProduction - Hoeveel afval produceert (per tick).
+         * @property {number} powerCapacity - Hoeveel stroom levert dit gebouw (indien centrale).
+         * @property {number} waterCapacity - Hoeveel water levert dit gebouw.
+         * @property {number} wasteCapacity - Hoeveel afval verwerkt dit gebouw.
+         * * --- NIEUW: Hulpdienst-eigenschap ---
+         * @property {string|null} serviceType - 'fire', 'police', of 'hospital'
+         */
+
+        /**
+         * @const {Object<string, BuildingData>} BuildingTypes
+         * Definitie van alle gebouwen, nu met categorieën en bronnen.
+         * *** HIER ZIJN DE NIEUWE GEBOUWEN TOEGEVOEGD ***
+         */
+        const BuildingTypes = {
+            // --- Categorie: WONINGEN ---
+            'house_1': {
+                name: 'Huis (Lvl 1)',
+                description: 'Een eenvoudig huis voor een klein gezin.',
+                cost: 2000,
+                emoji: '🏠',
+                category: 'woning',
+                happinessEffect: 2,
+                income: 100, // Belasting
+                population: 5,
+                upgradeTo: 'house_2',
+                powerUsage: 1, waterUsage: 1, wasteProduction: 1,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'house_2': {
+                name: 'Appartement (Lvl 2)',
+                description: 'Een klein appartementencomplex.',
+                cost: 5000, // Kosten om te upgraden
+                emoji: '🏘️',
+                category: 'woning',
+                happinessEffect: 4,
+                income: 300,
+                population: 20,
+                upgradeTo: 'house_3',
+                powerUsage: 3, waterUsage: 4, wasteProduction: 4,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'house_3': {
+                name: 'Woontoren (Lvl 3)',
+                description: 'Een hoge woontoren. Maximaal aantal bewoners.',
+                cost: 15000,
+                emoji: '🏢',
+                category: 'woning',
+                happinessEffect: 6,
+                income: 800,
+                population: 80,
+                upgradeTo: null, // Max level
+                powerUsage: 10, waterUsage: 15, wasteProduction: 15,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+            // --- NIEUWE WONINGEN ---
+            'villa_1': {
+                name: 'Villa',
+                description: 'Een luxe villa voor de rijken. Hoge kosten, hoog geluk.',
+                cost: 8000,
+                emoji: '🏡',
+                category: 'woning',
+                happinessEffect: 5,
+                income: 400, // Hoge belasting
+                population: 2,
+                upgradeTo: null,
+                powerUsage: 3, waterUsage: 3, wasteProduction: 2,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'student_flat_1': {
+                name: 'Studentenflat',
+                description: 'Hoge bevolkingsdichtheid, laag geluk, maar goedkoop.',
+                cost: 3000,
+                emoji: '🧑‍🎓',
+                category: 'woning',
+                happinessEffect: -2,
+                income: 200, // Lage belasting
+                population: 40,
+                upgradeTo: null,
+                powerUsage: 8, waterUsage: 10, wasteProduction: 10,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+            // --- Categorie: COMMERCIEEL ---
+            'cafe_1': {
+                name: 'Café (Lvl 1)',
+                description: 'Gezelligheid en lichte inkomsten.',
+                cost: 1500,
+                emoji: '☕',
+                category: 'commercieel',
+                happinessEffect: 1,
+                income: 700,
+                population: 0,
+                upgradeTo: 'cafe_2',
+                powerUsage: 2, waterUsage: 2, wasteProduction: 2,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'cafe_2': {
+                name: 'Restaurant (Lvl 2)',
+                description: 'Trekt meer mensen en genereert meer inkomen.',
+                cost: 4000,
+                emoji: '🍽️',
+                category: 'commercieel',
+                happinessEffect: 3,
+                income: 1800,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 5, waterUsage: 6, wasteProduction: 5,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'luxury_1': {
+                name: 'Kleine Winkel (Lvl 1)',
+                description: 'Basisvoorzieningen voor de buurt.',
+                cost: 3000,
+                emoji: '🏬',
+                category: 'commercieel',
+                happinessEffect: 2,
+                income: 1000,
+                population: 0,
+                upgradeTo: 'luxury_2',
+                powerUsage: 3, waterUsage: 2, wasteProduction: 3,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'luxury_2': {
+                name: 'Winkelcentrum (Lvl 2)',
+                description: 'Groot commercieel centrum. Hoge winst.',
+                cost: 10000,
+                emoji: '🛍️',
+                category: 'commercieel',
+                happinessEffect: 5,
+                income: 4000,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 15, waterUsage: 10, wasteProduction: 12,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'it_office_1': {
+                name: 'IT-Kantoor (Lvl 1)',
+                description: 'Moderne werkplek. Stabiel inkomen.',
+                cost: 3000,
+                emoji: '💻',
+                category: 'commercieel',
+                happinessEffect: 2,
+                income: 850,
+                population: 0,
+                upgradeTo: 'it_office_2',
+                powerUsage: 5, waterUsage: 2, wasteProduction: 2,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'it_office_2': {
+                name: 'Tech Campus (Lvl 2)',
+                description: 'Grote speler in de tech-wereld. Veel werkgelegenheid.',
+                cost: 8000,
+                emoji: '🌐',
+                category: 'commercieel',
+                happinessEffect: 4,
+                income: 2500,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 12, waterUsage: 5, wasteProduction: 5,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+            // --- NIEUWE COMMERCIELE GEBOUWEN ---
+            'bank_1': {
+                name: 'Bank',
+                description: 'Financiële diensten. Stabiel, hoog inkomen.',
+                cost: 12000,
+                emoji: '🏦',
+                category: 'commercieel',
+                happinessEffect: 1,
+                income: 3500,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 6, waterUsage: 2, wasteProduction: 2,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'hotel_1': {
+                name: 'Hotel (Lvl 1)',
+                description: 'Trekt toeristen aan en zorgt voor inkomsten.',
+                cost: 7000,
+                emoji: '🏨',
+                category: 'commercieel',
+                happinessEffect: 3,
+                income: 2000,
+                population: 0,
+                upgradeTo: 'hotel_2',
+                powerUsage: 10, waterUsage: 12, wasteProduction: 8,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'hotel_2': {
+                name: 'Luxe Resort (Lvl 2)',
+                description: 'Een vijfsterrenervaring. Trekt rijke toeristen.',
+                cost: 20000, // Upgrade kosten
+                emoji: '✨',
+                category: 'commercieel',
+                happinessEffect: 8,
+                income: 7000,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 30, waterUsage: 40, wasteProduction: 25,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+            // --- Categorie: INDUSTRIE (Negatief geluk) ---
+            'factory_1': {
+                name: 'Fabriek (Lvl 1)',
+                description: 'Grote inkomsten, maar vervuiling. (-10 Geluk)',
+                cost: 4000,
+                emoji: '🏭',
+                category: 'industrie',
+                happinessEffect: -10,
+                income: 3000,
+                population: 0,
+                upgradeTo: 'factory_2',
+                powerUsage: 15, waterUsage: 10, wasteProduction: 10,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'factory_2': {
+                name: 'Industrieel Complex (Lvl 2)',
+                description: 'Massale productie. Zeer hoge winst, zeer hoge vervuiling.',
+                cost: 12000,
+                emoji: '🏭🏭',
+                category: 'industrie',
+                happinessEffect: -25,
+                income: 9000,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 40, waterUsage: 25, wasteProduction: 30,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+            // --- NIEUWE INDUSTRIE ---
+            'logistics_1': {
+                name: 'Logistiek Centrum',
+                description: 'Distributie van goederen. Minder vervuilend dan een fabriek.',
+                cost: 6000,
+                emoji: '🚚',
+                category: 'industrie',
+                happinessEffect: -4,
+                income: 2200,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 10, waterUsage: 3, wasteProduction: 5,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'farm_1': {
+                name: 'Stadsboerderij',
+                description: 'Lokale voedselproductie. Licht positief geluk.',
+                cost: 2500,
+                emoji: '🚜',
+                category: 'industrie',
+                happinessEffect: 1, // Mensen vinden lokaal voedsel fijn
+                income: 400,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 1,
+                waterUsage: 8, // Heeft veel water nodig
+                wasteProduction: 3,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+            // --- Categorie: VERMAAK & CULTUUR ---
+            'cinema': {
+                name: 'Bioscoop',
+                description: 'Entertainment voor de burgers.',
+                cost: 4500,
+                emoji: '🎬',
+                category: 'vermaak',
+                happinessEffect: 3,
+                income: 1200,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 8, waterUsage: 3, wasteProduction: 4,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'museum': {
+                name: 'Museum',
+                description: 'Cultuur en toerisme. Goed voor geluk.',
+                cost: 3500,
+                emoji: '🏛️',
+                category: 'vermaak',
+                happinessEffect: 4,
+                income: 950,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 5, waterUsage: 2, wasteProduction: 2,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'park_1': {
+                name: 'Park (Lvl 1)',
+                description: 'Een klein stukje groen. Erg goed voor geluk.',
+                cost: 1500,
+                emoji: '🌳',
+                category: 'vermaak',
+                happinessEffect: 8,
+                income: 0,
+                population: 0,
+                upgradeTo: 'park_2',
+                powerUsage: 0,
+                waterUsage: 2, // Parken hebben water nodig
+                wasteProduction: 1,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'park_2': {
+                name: 'Groot Stadspark (Lvl 2)',
+                description: 'Een centrale plek voor ontspanning.',
+                cost: 4000,
+                emoji: '🏞️',
+                category: 'vermaak',
+                happinessEffect: 15,
+                income: 50, // Toerisme
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 1, // Verlichting
+                waterUsage: 5,
+                wasteProduction: 3,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+            // --- NIEUW VERMAAK ---
+            'stadium_1': {
+                name: 'Stadion',
+                description: 'Sport en concerten. Grote boost voor geluk, maar duur.',
+                cost: 30000,
+                emoji: '🏟️',
+                category: 'vermaak',
+                happinessEffect: 20,
+                income: 2500, // Ticketverkoop
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 50, // Verlichting, etc.
+                waterUsage: 30,
+                wasteProduction: 40, // Veel afval na een evenement
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+            // --- Categorie: PUBLIEKE DIENSTEN (was 4, nu 'publiek') ---
+            'school': {
+                name: 'School',
+                description: 'Goed voor de toekomst, licht positief effect.',
+                cost: 2500,
+                emoji: '🏫',
+                category: 'publiek',
+                happinessEffect: 1,
+                income: 300,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 4, waterUsage: 5, wasteProduction: 3,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'cityhall': {
+                name: 'Stadhuis',
+                description: 'Noodzakelijk voor de stad. Neutraal.',
+                cost: 8000,
+                emoji: '🏛️', // Gebruikt zelfde als museum, misschien 'E' (Stadhuis)
+                category: 'publiek',
+                happinessEffect: 0,
+                income: 0,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 5, waterUsage: 3, wasteProduction: 2,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+            // --- NIEUWE PUBLIEKE DIENSTEN (met serviceType) ---
+            'hospital_1': {
+                name: 'Ziekenhuis',
+                description: 'Houdt uw burgers gezond. Essentieel voor een grote stad.',
+                cost: 20000,
+                emoji: '🏥',
+                category: 'publiek',
+                happinessEffect: 10, // Gezondheid = geluk
+                income: 100, // Representeert waarde, geen winst
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 25, waterUsage: 30, wasteProduction: 20,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: 'medical', // NIEUW
+            },
+            'police_1': {
+                name: 'Politiebureau',
+                description: 'Zorgt voor veiligheid en verhoogt geluk.',
+                cost: 15000,
+                emoji: '🚓',
+                category: 'publiek',
+                happinessEffect: 8,
+                income: 50,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 10, waterUsage: 5, wasteProduction: 5,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: 'crime', // NIEUW
+            },
+            'fire_dept_1': {
+                name: 'Brandweerkazerne',
+                description: 'Beschermt uw gebouwen en burgers.',
+                cost: 15000,
+                emoji: '🚒',
+                category: 'publiek',
+                happinessEffect: 8,
+                income: 50,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 12, waterUsage: 15, // Testen apparatuur
+                wasteProduction: 5,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: 'fire', // NIEUW
+            },
+            'library_1': {
+                name: 'Bibliotheek',
+                description: 'Biedt kennis en een rustige plek. Goed voor geluk.',
+                cost: 6000,
+                emoji: '📚',
+                category: 'publiek',
+                happinessEffect: 4,
+                income: 10,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 5, waterUsage: 3, wasteProduction: 2,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+
+            // --- NIEUW: Categorie: VOORZIENINGEN ---
+            'power_plant_1': {
+                name: 'Energiecentrale (Lvl 1)',
+                description: 'Levert 100 Stroom. Vervuilend.',
+                cost: 10000,
+                emoji: '⚡️',
+                category: 'voorziening',
+                happinessEffect: -8, // Vervuiling dichtbij
+                income: 0,
+                population: 0,
+                upgradeTo: 'power_plant_2',
+                powerUsage: 0,
+                waterUsage: 5, // Heeft water nodig voor koeling
+                wasteProduction: 5,
+                powerCapacity: 100, // LEVERT STROOM
+                waterCapacity: 0,
+                wasteCapacity: 0,
+                serviceType: null,
+            },
+            'power_plant_2': {
+                name: 'Kerncentrale (Lvl 2)',
+                description: 'Levert 500 Stroom. Duur, maar efficiënt.',
+                cost: 40000,
+                emoji: '☢️',
+                category: 'voorziening',
+                happinessEffect: -15, // Mensen zijn bang
+                income: 0,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 10, // Verbruikt zelf ook
+                waterUsage: 20,
+                wasteProduction: 2, // Weinig afval, maar wel gevaarlijk ;)
+                powerCapacity: 500,
+                waterCapacity: 0,
+                wasteCapacity: 0,
+                serviceType: null,
+            },
+            'water_tower_1': {
+                name: 'Watertoren (Lvl 1)',
+                description: 'Levert 100 Water.',
+                cost: 8000,
+                emoji: '💧',
+                category: 'voorziening',
+                happinessEffect: 0,
+                income: 0,
+                population: 0,
+                upgradeTo: 'water_tower_2',
+                powerUsage: 5, // Pomp verbruikt stroom
+                waterUsage: 0,
+                wasteProduction: 1,
+                powerCapacity: 0,
+                waterCapacity: 100, // LEVERT WATER
+                wasteCapacity: 0,
+                serviceType: null,
+            },
+            'water_tower_2': {
+                name: 'Waterzuivering (Lvl 2)',
+                description: 'Levert 500 Water.',
+                cost: 30000,
+                emoji: '🌊',
+                category: 'voorziening',
+                happinessEffect: -2, // Geur
+                income: 0,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 15,
+                waterUsage: 0,
+                wasteProduction: 5,
+                powerCapacity: 0,
+                waterCapacity: 500,
+                wasteCapacity: 0,
+                serviceType: null,
+            },
+            'landfill_1': {
+                name: 'Vuilstort (Lvl 1)',
+                description: 'Verwerkt 100 Afval. Stinkt.',
+                cost: 5000,
+                emoji: '🗑️',
+                category: 'voorziening',
+                happinessEffect: -10,
+                income: 0,
+                population: 0,
+                upgradeTo: 'landfill_2',
+                powerUsage: 5, // Machines
+                waterUsage: 2,
+                wasteProduction: 0,
+                powerCapacity: 0,
+                waterCapacity: 0,
+                wasteCapacity: 100, // VERWERKT AFVAL
+                serviceType: null,
+            },
+            'landfill_2': {
+                name: 'Afvalverbrander (Lvl 2)',
+                description: 'Verwerkt 500 Afval, maar vervuilt.',
+                cost: 25000,
+                emoji: '🔥',
+                category: 'voorziening',
+                happinessEffect: -20, // Luchtvervuiling
+                income: 0,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 15,
+                waterUsage: 5,
+                wasteProduction: 0,
+                powerCapacity: 0,
+                waterCapacity: 0,
+                wasteCapacity: 500,
+                serviceType: null,
+            },
+
+            // --- NIEUWE VOORZIENINGEN ---
+            'solar_plant_1': {
+                name: 'Zonnepark',
+                description: 'Levert 50 Stroom. Schoon, maar duur in aanschaf.',
+                cost: 15000,
+                emoji: '☀️',
+                category: 'voorziening',
+                happinessEffect: 2, // Schone energie
+                income: 0,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 0,
+                waterUsage: 0,
+                wasteProduction: 0,
+                powerCapacity: 50, // LEVERT STROOM
+                waterCapacity: 0,
+                wasteCapacity: 0,
+                serviceType: null,
+            },
+            'wind_turbine_1': {
+                name: 'Windturbine',
+                description: 'Levert 30 Stroom. Schoon, maar minder efficiënt.',
+                cost: 9000,
+                emoji: '🌬️',
+                category: 'voorziening',
+                happinessEffect: 1,
+                income: 0,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 0,
+                waterUsage: 0,
+                wasteProduction: 0,
+                powerCapacity: 30, // LEVERT STROOM
+                waterCapacity: 0,
+                wasteCapacity: 0,
+                serviceType: null,
+            },
+            'recycling_1': {
+                name: 'Recyclingcentrum',
+                description: 'Verwerkt 50 Afval. Milieuvriendelijk en licht positief.',
+                cost: 7000,
+                emoji: '♻️',
+                category: 'voorziening',
+                happinessEffect: 2,
+                income: 100, // Verkoop van materialen
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 8,
+                waterUsage: 5,
+                wasteProduction: 0,
+                powerCapacity: 0,
+                waterCapacity: 0,
+                wasteCapacity: 50, // VERWERKT AFVAL
+                serviceType: null,
+            },
+            'casino_1': {
+                name: 'Casino (Lvl 1)',
+                description: 'Gokken maar! Hoge inkomsten, wisselend geluk.',
+                cost: 25000,
+                emoji: '🎲',
+                category: 'entertainment',
+                happinessEffect: -2, // Gambling can be problematic
+                income: 5000,
+                population: 0,
+                upgradeTo: 'casino_2',
+                powerUsage: 30,
+                waterUsage: 10,
+                wasteProduction: 15,
+                powerCapacity: 0,
+                waterCapacity: 0,
+                wasteCapacity: 0,
+                serviceType: null,
+            },
+            'casino_2': {
+                name: 'Mega Casino (Lvl 2)',
+                description: 'Las Vegas style! Enorme inkomsten.',
+                cost: 50000,
+                emoji: '🎰',
+                category: 'entertainment',
+                happinessEffect: -5,
+                income: 12000,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 60,
+                waterUsage: 20,
+                wasteProduction: 30,
+                powerCapacity: 0,
+                waterCapacity: 0,
+                wasteCapacity: 0,
+                serviceType: null,
+            },
+            'themepark_1': {
+                name: 'Pretpark (Lvl 1)',
+                description: 'Plezier voor het hele gezin!',
+                cost: 35000,
+                emoji: '🎡',
+                category: 'entertainment',
+                happinessEffect: 15,
+                income: 3000,
+                population: 0,
+                upgradeTo: 'themepark_2',
+                powerUsage: 40,
+                waterUsage: 25,
+                wasteProduction: 20,
+                powerCapacity: 0,
+                waterCapacity: 0,
+                wasteCapacity: 0,
+                serviceType: null,
+            },
+            'themepark_2': {
+                name: 'Mega Pretpark (Lvl 2)',
+                description: 'Een wereldberoemd pretpark!',
+                cost: 75000,
+                emoji: '🎢',
+                category: 'entertainment',
+                happinessEffect: 25,
+                income: 7000,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 80,
+                waterUsage: 50,
+                wasteProduction: 40,
+                powerCapacity: 0,
+                waterCapacity: 0,
+                wasteCapacity: 0,
+                serviceType: null,
+            },
+            'concert_hall': {
+                name: 'Concertzaal',
+                description: 'Live muziek en entertainment.',
+                cost: 20000,
+                emoji: '🎵',
+                category: 'entertainment',
+                happinessEffect: 10,
+                income: 2000,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 25,
+                waterUsage: 10,
+                wasteProduction: 15,
+                powerCapacity: 0,
+                waterCapacity: 0,
+                wasteCapacity: 0,
+                serviceType: null,
+            },
+
+        };
+        
+        const LoanSettings = {
+            MIN_LOAN: 10000,
+            MAX_LOAN: 100000,
+            INTEREST_RATE: 0.10, // 10% rente per minuut
+            REPAYMENT_TICKS: 6,  // Aflossen over 6 ticks (1 minuut)
+        };
+
+        /**
+         * @const {Object<string, string>} CategoryNames
+         * Vriendelijke namen voor de tabbladen.
+         */
+        const CategoryNames = {
+            'woning': 'Woningen 🏠',
+            'commercieel': 'Commercieel 💰',
+            'industrie': 'Industrie 🏭',
+            'vermaak': 'Vermaak 🌳',
+            'publiek': 'Publiek 🏫',
+            'voorziening': 'Voorzieningen ⚡️',
+            'entertainment': 'Entertainment 🎲',
+
+        };
+
+        /**
+         * @const {Array<Object>} SlotsData
+         * Definitie van alle bouwlocaties op de kaart.
+         * NU MET PIXEL-COÖRDINATEN voor de 2500x2000 kaart.
+         */
+        const SlotsData = [
+            // --- BLOK 1 (X: 100-500, Y: 100) ---
+            { id: 'slot-1', top: '100px', left: '100px' },
+            { id: 'slot-2', top: '100px', left: '200px' },
+            { id: 'slot-3', top: '100px', left: '300px' },
+            { id: 'slot-4', top: '100px', left: '400px' },
+            { id: 'slot-5', top: '100px', left: '500px' },
+            // --- BLOK 2 (X: 700-800, Y: 100) ---
+            { id: 'slot-6', top: '100px', left: '700px' },
+            { id: 'slot-7', top: '100px', left: '800px' },
+            // --- BLOK 3 (X: 1000-1100, Y: 100) ---
+            { id: 'slot-8', top: '100px', left: '1000px' },
+            { id: 'slot-9', top: '100px', left: '1100px' },
+            // --- BLOK 4 (X: 1300-1400, Y: 100) ---
+            { id: 'slot-10', top: '100px', left: '1300px' },
+            { id: 'slot-11', top: '100px', left: '1400px' },
+            // --- BLOK 5 (X: 1600-1700, Y: 100) ---
+            { id: 'slot-12', top: '100px', left: '1600px' },
+            { id: 'slot-13', top: '100px', left: '1700px' },
+            // --- BLOK 6 (X: 1900-2400, Y: 100) ---
+            { id: 'slot-14', top: '100px', left: '1900px' },
+            { id: 'slot-15', top: '100px', left: '2000px' },
+            { id: 'slot-16', top: '100px', left: '2100px' },
+            { id: 'slot-17', top: '100px', left: '2200px' },
+            { id: 'slot-18', top: '100px', left: '2300px' },
+            { id: 'slot-19', top: '100px', left: '2400px' },
+            // --- BLOK 1 (X: 100-500, Y: 350-400) ---
+            { id: 'slot-20', top: '350px', left: '100px' },
+            { id: 'slot-21', top: '350px', left: '200px' },
+            { id: 'slot-22', top: '350px', left: '300px' },
+            { id: 'slot-23', top: '350px', left: '400px' },
+            { id: 'slot-24', top: '350px', left: '500px' },
+            { id: 'slot-25', top: '400px', left: '100px' },
+            { id: 'slot-26', top: '400px', left: '200px' },
+            { id: 'slot-27', top: '400px', left: '300px' },
+            { id: 'slot-28', top: '400px', left: '400px' },
+            { id: 'slot-29', top: '400px', left: '500px' },
+            // --- BLOK 2 (X: 700-800, Y: 350-400) ---
+            { id: 'slot-30', top: '350px', left: '700px' },
+            { id: 'slot-31', top: '350px', left: '800px' },
+            { id: 'slot-32', top: '400px', left: '700px' },
+            { id: 'slot-33', top: '400px', left: '800px' },
+            // --- BLOK 3 (X: 1000-1100, Y: 350-400) ---
+            { id: 'slot-34', top: '350px', left: '1000px' },
+            { id: 'slot-35', top: '350px', left: '1100px' },
+            { id: 'slot-36', top: '400px', left: '1000px' },
+            { id: 'slot-37', top: '400px', left: '1100px' },
+            // --- BLOK 4 (X: 1300-1400, Y: 350-400) ---
+            { id: 'slot-38', top: '350px', left: '1300px' },
+            { id: 'slot-39', top: '350px', left: '1400px' },
+            { id: 'slot-40', top: '400px', left: '1300px' },
+            { id: 'slot-41', top: '400px', left: '1400px' },
+            // --- BLOK 5 (X: 1600-1700, Y: 350-400) ---
+            { id: 'slot-42', top: '350px', left: '1600px' },
+            { id: 'slot-43', top: '350px', left: '1700px' },
+            { id: 'slot-44', top: '400px', left: '1600px' },
+            { id: 'slot-45', top: '400px', left: '1700px' },
+            // --- BLOK 6 (X: 1900-2400, Y: 350-400) ---
+            { id: 'slot-46', top: '350px', left: '1900px' },
+            { id: 'slot-47', top: '350px', left: '2000px' },
+            { id: 'slot-48', top: '350px', left: '2100px' },
+            { id: 'slot-49', top: '350px', left: '2200px' },
+            { id: 'slot-50', top: '350px', left: '2300px' },
+            { id: 'slot-51', top: '350px', left: '2400px' },
+            { id: 'slot-52', top: '400px', left: '1900px' },
+            { id: 'slot-53', top: '400px', left: '2000px' },
+            { id: 'slot-54', top: '400px', left: '2100px' },
+            { id: 'slot-55', top: '400px', left: '2200px' },
+            { id: 'slot-56', top: '400px', left: '2300px' },
+            { id: 'slot-57', top: '400px', left: '2400px' },
+            // --- BLOK 1 (X: 100-500, Y: 600) ---
+            { id: 'slot-58', top: '600px', left: '100px' },
+            { id: 'slot-59', top: '600px', left: '200px' },
+            { id: 'slot-60', top: '600px', left: '300px' },
+            { id: 'slot-61', top: '600px', left: '400px' },
+            { id: 'slot-62', top: '600px', left: '500px' },
+            // --- BLOK 2 (X: 700-800, Y: 600) ---
+            { id: 'slot-63', top: '600px', left: '700px' },
+            { id: 'slot-64', top: '600px', left: '800px' },
+            // --- BLOK 3 (X: 1000-1100, Y: 600) ---
+            { id: 'slot-65', top: '600px', left: '1000px' },
+            { id: 'slot-66', top: '600px', left: '1100px' },
+            // --- BLOK 4 (X: 1300-1400, Y: 600) ---
+            { id: 'slot-67', top: '600px', left: '1300px' },
+            { id: 'slot-68', top: '600px', left: '1400px' },
+            // --- BLOK 5 (X: 1600-1700, Y: 600) ---
+            { id: 'slot-69', top: '600px', left: '1600px' },
+            { id: 'slot-70', top: '600px', left: '1700px' },
+            // --- BLOK 6 (X: 1900-2400, Y: 600) ---
+            { id: 'slot-71', top: '600px', left: '1900px' },
+            { id: 'slot-72', top: '600px', left: '2000px' },
+            { id: 'slot-73', top: '600px', left: '2100px' },
+            { id: 'slot-74', top: '600px', left: '2200px' },
+            { id: 'slot-75', top: '600px', left: '2300px' },
+            { id: 'slot-76', top: '600px', left: '2400px' },
+            // --- BLOK 1 (X: 100-500, Y: 800) ---
+            { id: 'slot-77', top: '800px', left: '100px' },
+            { id: 'slot-78', top: '800px', left: '200px' },
+            { id: 'slot-79', top: '800px', left: '300px' },
+            { id: 'slot-80', top: '800px', left: '400px' },
+            { id: 'slot-81', top: '800px', left: '500px' },
+            // --- BLOK 2 (X: 700-800, Y: 800) ---
+            { id: 'slot-82', top: '800px', left: '700px' },
+            { id: 'slot-83', top: '800px', left: '800px' },
+            // --- BLOK 3 (X: 1000-1100, Y: 800) ---
+            { id: 'slot-84', top: '800px', left: '1000px' },
+            { id: 'slot-85', top: '800px', left: '1100px' },
+            // --- BLOK 4 (X: 1300-1400, Y: 800) ---
+            { id: 'slot-86', top: '800px', left: '1300px' },
+            { id: 'slot-87', top: '800px', left: '1400px' },
+            // --- BLOK 5 (X: 1600-1700, Y: 800) ---
+            { id: 'slot-88', top: '800px', left: '1600px' },
+            { id: 'slot-89', top: '800px', left: '1700px' },
+            // --- BLOK 6 (X: 1900-2400, Y: 800) ---
+            { id: 'slot-90', top: '800px', left: '1900px' },
+            { id: 'slot-91', top: '800px', left: '2000px' },
+            { id: 'slot-92', top: '800px', left: '2100px' },
+            { id: 'slot-93', top: '800px', left: '2200px' },
+            { id: 'slot-94', top: '800px', left: '2300px' },
+            { id: 'slot-95', top: '800px', left: '2400px' },
+            // --- BLOK 1 (X: 100-500, Y: 1000-1100) ---
+            { id: 'slot-96', top: '1000px', left: '100px' },
+            { id: 'slot-97', top: '1000px', left: '200px' },
+            { id: 'slot-98', top: '1000px', left: '300px' },
+            { id: 'slot-99', top: '1000px', left: '400px' },
+            { id: 'slot-100', top: '1000px', left: '500px' },
+            { id: 'slot-101', top: '1100px', left: '100px' },
+            { id: 'slot-102', top: '1100px', left: '200px' },
+            { id: 'slot-103', top: '1100px', left: '300px' },
+            { id: 'slot-104', top: '1100px', left: '400px' },
+            { id: 'slot-105', top: '1100px', left: '500px' },
+            // --- BLOK 2 (X: 700-800, Y: 1000-1100) ---
+            { id: 'slot-106', top: '1000px', left: '700px' },
+            { id: 'slot-107', top: '1000px', left: '800px' },
+            { id: 'slot-108', top: '1100px', left: '700px' },
+            { id: 'slot-109', top: '1100px', left: '800px' },
+            // --- BLOK 3 (X: 1000-1100, Y: 1000-1100) ---
+            { id: 'slot-110', top: '1000px', left: '1000px' },
+            { id: 'slot-111', top: '1000px', left: '1100px' },
+            { id: 'slot-112', top: '1100px', left: '1000px' },
+            { id: 'slot-113', top: '1100px', left: '1100px' },
+            // --- BLOK 4 (X: 1300-1400, Y: 1000-1100) ---
+            { id: 'slot-114', top: '1000px', left: '1300px' },
+            { id: 'slot-115', top: '1000px', left: '1400px' },
+            { id: 'slot-116', top: '1100px', left: '1300px' },
+            { id: 'slot-117', top: '1100px', left: '1400px' },
+            // --- BLOK 5 (X: 1600-1700, Y: 1000-1100) ---
+            { id: 'slot-118', top: '1000px', left: '1600px' },
+            { id: 'slot-119', top: '1000px', left: '1700px' },
+            { id: 'slot-120', top: '1100px', left: '1600px' },
+            { id: 'slot-121', top: '1100px', left: '1700px' },
+            // --- BLOK 6 (X: 1900-2400, Y: 1000-1100) ---
+            { id: 'slot-122', top: '1000px', left: '1900px' },
+            { id: 'slot-123', top: '1000px', left: '2000px' },
+            { id: 'slot-124', top: '1000px', left: '2100px' },
+            { id: 'slot-125', top: '1000px', left: '2200px' },
+            { id: 'slot-126', top: '1000px', left: '2300px' },
+            { id: 'slot-127', top: '1000px', left: '2400px' },
+            { id: 'slot-128', top: '1100px', left: '1900px' },
+            { id: 'slot-129', top: '1100px', left: '2000px' },
+            { id: 'slot-130', top: '1100px', left: '2100px' },
+            { id: 'slot-131', top: '1100px', left: '2200px' },
+            { id: 'slot-132', top: '1100px', left: '2300px' },
+            { id: 'slot-133', top: '1100px', left: '2400px' },
+            // --- BLOK 1 (X: 100-500, Y: 1300) ---
+            { id: 'slot-134', top: '1300px', left: '100px' },
+            { id: 'slot-135', top: '1300px', left: '200px' },
+            { id: 'slot-136', top: '1300px', left: '300px' },
+            { id: 'slot-137', top: '1300px', left: '400px' },
+            { id: 'slot-138', top: '1300px', left: '500px' },
+            // --- BLOK 2 (X: 700-800, Y: 1300) ---
+            { id: 'slot-139', top: '1300px', left: '700px' },
+            { id: 'slot-140', top: '1300px', left: '800px' },
+            // --- BLOK 3 (X: 1000-1100, Y: 1300) ---
+            { id: 'slot-141', top: '1300px', left: '1000px' },
+            { id: 'slot-142', top: '1300px', left: '1100px' },
+            // --- BLOK 4 (X: 1300-1400, Y: 1300) ---
+            { id: 'slot-143', top: '1300px', left: '1300px' },
+            { id: 'slot-144', top: '1300px', left: '1400px' },
+            // --- BLOK 5 (X: 1600-1700, Y: 1300) ---
+            { id: 'slot-145', top: '1300px', left: '1600px' },
+            { id: 'slot-146', top: '1300px', left: '1700px' },
+            // --- BLOK 6 (X: 1900-2400, Y: 1300) ---
+            { id: 'slot-147', top: '1300px', left: '1900px' },
+            { id: 'slot-148', top: '1300px', left: '2000px' },
+            { id: 'slot-149', top: '1300px', left: '2100px' },
+            { id: 'slot-150', top: '1300px', left: '2200px' },
+            { id: 'slot-151', top: '1300px', left: '2300px' },
+            { id: 'slot-152', top: '1300px', left: '2400px' },
+            // --- BLOK 1 (X: 100-500, Y: 1550-1600) ---
+            { id: 'slot-153', top: '1550px', left: '100px' },
+            { id: 'slot-154', top: '1550px', left: '200px' },
+            { id: 'slot-155', top: '1550px', left: '300px' },
+            { id: 'slot-156', top: '1550px', left: '400px' },
+            { id: 'slot-157', top: '1550px', left: '500px' },
+            { id: 'slot-158', top: '1600px', left: '100px' },
+            { id: 'slot-159', top: '1600px', left: '200px' },
+            { id: 'slot-160', top: '1600px', left: '300px' },
+            { id: 'slot-161', top: '1600px', left: '400px' },
+            { id: 'slot-162', top: '1600px', left: '500px' },
+            // --- BLOK 2 (X: 700-800, Y: 1550-1600) ---
+            { id: 'slot-163', top: '1550px', left: '700px' },
+            { id: 'slot-164', top: '1550px', left: '800px' },
+            { id: 'slot-165', top: '1600px', left: '700px' },
+            { id: 'slot-166', top: '1600px', left: '800px' },
+            // --- BLOK 3 (X: 1000-1100, Y: 1550-1600) ---
+            { id: 'slot-167', top: '1550px', left: '1000px' },
+            { id: 'slot-168', top: '1550px', left: '1100px' },
+            { id: 'slot-169', top: '1600px', left: '1000px' },
+            { id: 'slot-170', top: '1600px', left: '1100px' },
+            // --- BLOK 4 (X: 1300-1400, Y: 1550-1600) ---
+            { id: 'slot-171', top: '1550px', left: '1300px' },
+            { id: 'slot-172', top: '1550px', left: '1400px' },
+            { id: 'slot-173', top: '1600px', left: '1300px' },
+            { id: 'slot-174', top: '1600px', left: '1400px' },
+            // --- BLOK 5 (X: 1600-1700, Y: 1550-1600) ---
+            { id: 'slot-175', top: '1550px', left: '1600px' },
+            { id: 'slot-176', top: '1550px', left: '1700px' },
+            { id: 'slot-177', top: '1600px', left: '1600px' },
+            { id: 'slot-178', top: '1600px', left: '1700px' },
+            // --- BLOK 6 (X: 1900-2400, Y: 1550-1600) ---
+            { id: 'slot-179', top: '1550px', left: '1900px' },
+            { id: 'slot-180', top: '1550px', left: '2000px' },
+            { id: 'slot-181', top: '1550px', left: '2100px' },
+            { id: 'slot-182', top: '1550px', left: '2200px' },
+            { id: 'slot-183', top: '1550px', left: '2300px' },
+            { id: 'slot-184', top: '1550px', left: '2400px' },
+            { id: 'slot-185', top: '1600px', left: '1900px' },
+            { id: 'slot-186', top: '1600px', left: '2000px' },
+            { id: 'slot-187', top: '1600px', left: '2100px' },
+            { id: 'slot-188', top: '1600px', left: '2200px' },
+            { id: 'slot-189', top: '1600px', left: '2300px' },
+            { id: 'slot-190', top: '1600px', left: '2400px' },
+            // --- BLOK 1 (X: 100-500, Y: 1800-1900) ---
+            { id: 'slot-191', top: '1800px', left: '100px' },
+            { id: 'slot-192', top: '1800px', left: '200px' },
+            { id: 'slot-193', top: '1800px', left: '300px' },
+            { id: 'slot-194', top: '1800px', left: '400px' },
+            { id: 'slot-195', top: '1800px', left: '500px' },
+            { id: 'slot-196', top: '1900px', left: '100px' },
+            { id: 'slot-197', top: '1900px', left: '200px' },
+            { id: 'slot-198', top: '1900px', left: '300px' },
+            { id: 'slot-199', top: '1900px', left: '400px' },
+            { id: 'slot-200', top: '1900px', left: '500px' },
+            // --- BLOK 2 (X: 700-800, Y: 1800-1900) ---
+            { id: 'slot-201', top: '1800px', left: '700px' },
+            { id: 'slot-202', top: '1800px', left: '800px' },
+            { id: 'slot-203', top: '1900px', left: '700px' },
+            { id: 'slot-204', top: '1900px', left: '800px' },
+            // --- BLOK 3 (X: 1000-1100, Y: 1800-1900) ---
+            { id: 'slot-205', top: '1800px', left: '1000px' },
+            { id: 'slot-206', top: '1800px', left: '1100px' },
+            { id: 'slot-207', top: '1900px', left: '1000px' },
+            { id: 'slot-208', top: '1900px', left: '1100px' },
+            // --- BLOK 4 (X: 1300-1400, Y: 1800-1900) ---
+            { id: 'slot-209', top: '1800px', left: '1300px' },
+            { id: 'slot-210', top: '1800px', left: '1400px' },
+            { id: 'slot-211', top: '1900px', left: '1300px' },
+            { id: 'slot-212', top: '1900px', left: '1400px' },
+            // --- BLOK 5 (X: 1600-1700, Y: 1800-1900) ---
+            { id: 'slot-213', top: '1800px', left: '1600px' },
+            { id: 'slot-214', top: '1800px', left: '1700px' },
+            { id: 'slot-215', top: '1900px', left: '1600px' },
+            { id: 'slot-216', top: '1900px', left: '1700px' },
+            // --- BLOK 6 (X: 1900-2400, Y: 1800-1900) ---
+            { id: 'slot-217', top: '1800px', left: '1900px' },
+            { id: 'slot-218', top: '1800px', left: '2000px' },
+            { id: 'slot-219', top: '1800px', left: '2100px' },
+            { id: 'slot-220', top: '1800px', left: '2200px' },
+            { id: 'slot-221', top: '1800px', left: '2300px' },
+            { id: 'slot-222', top: '1800px', left: '2400px' },
+            { id: 'slot-223', top: '1900px', left: '1900px' },
+            { id: 'slot-224', top: '1900px', left: '2000px' },
+            { id: 'slot-225', top: '1900px', left: '2100px' },
+            { id: 'slot-226', top: '1900px', left: '2200px' },
+            { id: 'slot-227', top: '1900px', left: '2300px' },
+            { id: 'slot-228', top: '1900px', left: '2400px' }
+        ];
+
+
+        /**
+         * @const {Array<Object>} RandomEvents
+         * (Onveranderd)
+         */
+        const RandomEvents = [
+            { id: 'boom', title: 'Economische Boom!', message: 'De economie bloeit! Alle inkomsten zijn 5 minuten lang 20% hoger.', durationTicks: 30, effect: { type: 'income_multiplier', value: 1.20 } },
+            { id: 'recession', title: 'Recessie...', message: 'Zware tijden. Alle inkomsten zijn 5 minuten lang 20% lager.', durationTicks: 30, effect: { type: 'income_multiplier', value: 0.80 } },
+            { id: 'festival', title: 'Stadsfestival!', message: 'Iedereen is blij! Eenmalige boost van +10 Geluk.', durationTicks: 1, effect: { type: 'happiness_boost', value: 10 } },
+            { id: 'maintenance', title: 'Onderhoudskosten', message: 'Onverwacht onderhoud aan de infrastructuur. Eenmalige kosten: €2500.', durationTicks: 1, effect: { type: 'flat_cost', value: 2500 } },
+            { id: 'tourism', title: 'Toerismestroom', message: 'Een golf van toeristen bezoekt de stad. +€5000 eenmalig!', durationTicks: 1, effect: { type: 'flat_income', value: 5000 } }
+        ];
+
+        /**
+         * @const {Object} GameSettings
+         * (Onveranderd)
+         */
+        const GameSettings = {
+            TICK_INTERVAL: 10000, // 10 seconden
+            DAY_NIGHT_TICK_DURATION: 6, // 1 minuut per cyclus
+            RANDOM_EVENT_CHANCE: 0.15,
+            DEFAULT_REFUND_PERCENTAGE: 0.5,
+            SAVE_KEY: 'buildersCitySave_v2', // Nieuwe save key ivm grote wijziging
+            // *** NIEUWE BASIS CAPACITEIT (AANGEPAST) ***
+            BASE_POWER_CAPACITY: 20,
+            BASE_WATER_CAPACITY: 20,
+            BASE_WASTE_CAPACITY: 20,
+            // *** NIEUWE NOODGEVAL INSTELLINGEN ***
+            EMERGENCY_CHANCE_PER_TICK: 0.05, // 5% kans per tick (10s) op een noodgeval
+            EMERGENCY_DURATION_TICKS: 15, // 15 ticks (150s) om op te lossen
+            EMERGENCY_VEHICLE_SPEED_MS: 5000, // 5 seconden reistijd
+        };
+
+        /**
+         * =================================================================
+         * Sectie 2: Game State
+         * =================================================================
+         */
+
+        /**
+         * @type {Object} GameState
+         * Beheert de huidige staat van het spel.
+         */
+        const GameState = {
+            saldo: 50000, // Start met meer geld voor de voorzieningen
+            happiness: 50,
+
+            /**
+             * @type {Object<string, string>}
+             * e.g., { "slot-1": "house_1" }
+             */
+            placedSlots: {},
+
+            // --- NIEUWE BRON-STATE ---
+            /** @type {{capacity: number, usage: number}} */
+            power: { capacity: 0, usage: 0 },
+            /** @type {{capacity: number, usage: number}} */
+            water: { capacity: 0, usage: 0 },
+            /** @type {{capacity: number, usage: number}} */
+            waste: { capacity: 0, usage: 0 }, // 'usage' is hier 'productie'
+
+            // --- NIEUW: NOODGEVAL-STATE ---
+            /**
+             * @type {Array<Object>}
+             * e.g., [{ slotId: 'slot-1', type: 'fire', durationTicks: 10, isDispatched: true }]
+             */
+            activeEmergencies: [],
+
+            // --- Overige state ---
+            selectedBuilding: null,
+            isSloopMode: false,
+            currentDayTime: 'day',
+            dayNightTickCounter: 0,
+            activeEvent: null,
+            sfx: { build: null, sloop: null, upgrade: null, income: null, error: null, event: null, siren: null },
+            isGameStarted: false,
+            // mapOffset: { x: 0, y: 0 } // Wordt nu beheerd door scrollLeft/Top
+        };
+
+        /**
+         * =================================================================
+         * Sectie 3: DOM Element Referenties
+         * =================================================================
+         */
+
+        const DOM = {
+            moneyDisplay: document.getElementById('money'),
+            happinessDisplay: document.getElementById('happiness'),
+            dayTimeDisplay: document.getElementById('day-time'),
+
+            // --- NIEUW: Resource Stats ---
+            powerStatsDisplay: document.getElementById('power-stats'),
+            waterStatsDisplay: document.getElementById('water-stats'),
+            wasteStatsDisplay: document.getElementById('waste-stats'),
+
+            // --- NIEUW: Tabbed Menu ---
+            buildTabsContainer: document.getElementById('build-tabs'),
+            buildPanelsContainer: document.getElementById('build-panels'),
+
+            // --- NIEUW: Kaart & Container ---
+            boardContainer: document.getElementById('board-container'),
+            board: document.getElementById('board'),
+
+            messageBox: document.getElementById('message-box'),
+            statsModal: document.getElementById('stats-modal'),
+            modalContent: document.getElementById('modal-content'),
+            sloopToggleButton: document.getElementById('sloop-toggle'),
+            nightOverlay: document.getElementById('night-overlay'),
+            startScherm: document.getElementById('start-scherm'),
+            startKnop: document.getElementById('start-knop'),
+            body: document.body
+        };
+
+        /**
+         * =================================================================
+         * Sectie 4: UI Manager
+         * Beheert alle updates aan de User Interface (DOM).
+         * =================================================================
+         */
+        const UIManager = {
+
+            initStartScherm: () => {
+                DOM.startKnop.addEventListener('click', () => {
+                    DOM.startScherm.style.display = 'none';
+                    GameState.isGameStarted = true;
+                    GameLogic.initAudio();
+                    GameLogic.startGameLoop();
+                    UIManager.showMessage('Welkom, Burgemeester! Laten we bouwen.', 'info');
+
+                    // Centreer de kaart na het starten
+                    UIManager.centerMap();
+                });
+            },
+
+            /**
+             * NIEUW: Centreert de kaart in het midden.
+             */
+            centerMap: () => {
+                const container = DOM.boardContainer;
+                const board = DOM.board;
+                container.scrollTop = (board.clientHeight - container.clientHeight) / 2;
+                container.scrollLeft = (board.clientWidth - container.clientWidth) / 2;
+            },
+
+            /**
+             * NIEUW: Initialiseert de sleep-functionaliteit van de kaart.
+             */
+            initMapDrag: () => {
+                let isDragging = false;
+                let lastX, lastY;
+                const boardContainer = DOM.boardContainer;
+
+                boardContainer.addEventListener('mousedown', (e) => {
+                    // Sta alleen slepen toe als op de container of het bord zelf wordt geklikt
+                    if (e.target !== boardContainer && e.target !== DOM.board && !e.target.classList.contains('road')) {
+                        return; // Niet slepen bij klikken op een slot
+                    }
+                    isDragging = true;
+                    boardContainer.style.cursor = 'grabbing';
+                    DOM.body.classList.add('is-dragging');
+                    lastX = e.clientX;
+                    lastY = e.clientY;
+                    e.preventDefault(); // Voorkom tekstselectie
+                });
+
+                window.addEventListener('mouseup', () => {
+                    if (isDragging) {
+                        isDragging = false;
+                        boardContainer.style.cursor = 'grab';
+                        DOM.body.classList.remove('is-dragging');
+                    }
+                });
+
+                window.addEventListener('mouseleave', () => {
+                    if (isDragging) {
+                        isDragging = false;
+                        boardContainer.style.cursor = 'grab';
+                        DOM.body.classList.remove('is-dragging');
+                    }
+                });
+
+                window.addEventListener('mousemove', (e) => {
+                    if (!isDragging) return;
+                    const deltaX = e.clientX - lastX;
+                    const deltaY = e.clientY - lastY;
+                    boardContainer.scrollLeft -= deltaX;
+                    boardContainer.scrollTop -= deltaY;
+                    lastX = e.clientX;
+                    lastY = e.clientY;
+                });
+            },
+
+            /**
+             * Rendert het volledige spelbord op basis van GameState.
+             * (AANGEPAST MET NOODGEVAL-LOGICA)
+             */
+            renderBoard: () => {
+                DOM.board.querySelectorAll('.slot').forEach(slot => slot.remove());
+
+                // Controleer resource status
+                const allResourcesOK = GameLogic.areAllResourcesOK();
+                const resources = GameState; // Voor makkelijke toegang
+
+                SlotsData.forEach(data => {
+                    const slot = document.createElement('div');
+                    slot.id = data.id;
+                    slot.className = 'slot';
+                    slot.style.top = data.top;
+                    slot.style.left = data.left;
+                    slot.dataset.slotId = data.id;
+                    slot.style.zIndex = '20';
+
+                    const buildingType = GameState.placedSlots[data.id];
+                    if (buildingType) {
+                        const building = BuildingTypes[buildingType];
+                        if (!building) {
+                            console.error(`Opgeslagen gebouw "${buildingType}" op slot ${data.id} bestaat niet meer.`);
+                            delete GameState.placedSlots[data.id];
+                            return;
+                        }
+                        slot.classList.add('occupied');
+
+                        const emojiSpan = document.createElement('span');
+                        emojiSpan.textContent = building.emoji;
+                        slot.appendChild(emojiSpan);
+
+                        const levelMatch = buildingType.match(/_(\d)$/);
+                        if (levelMatch) {
+                            const levelBadge = document.createElement('span');
+                            levelBadge.className = 'level-badge';
+                            levelBadge.textContent = `Lvl ${levelMatch[1]}`;
+                            slot.appendChild(levelBadge);
+                        }
+
+                        // NIEUW: Controleer of dit specifieke gebouw stroom heeft
+                        // We tonen alleen een waarschuwing als de *hele* stad een tekort heeft
+                        if (!allResourcesOK && building.powerUsage > 0 && resources.power.usage > resources.power.capacity) {
+                            slot.classList.add('no-power');
+                            slot.title = "Dit gebouw heeft geen stroom!";
+                        }
+                        else if (!allResourcesOK && building.waterUsage > 0 && resources.water.usage > resources.water.capacity) {
+                            slot.classList.add('no-power'); // Zelfde stijl, andere tooltip
+                            slot.title = "Dit gebouw heeft geen water!";
+                        }
+                        else if (!allResourcesOK && building.wasteProduction > 0 && resources.waste.usage > resources.waste.capacity) {
+                            slot.classList.add('no-power'); // Zelfde stijl, andere tooltip
+                            slot.title = "Dit gebouw kan zijn afval niet kwijt!";
+                        }
+
+                        // --- NIEUW: Controleer op noodgevallen ---
+                        const emergency = GameState.activeEmergencies.find(e => e.slotId === data.id);
+                        if (emergency) {
+                            slot.classList.add('emergency-marker', emergency.type === 'fire' ? 'on-fire' : emergency.type);
+                            slot.title = `NOODGEVAL: ${emergency.type.toUpperCase()}!`;
+                        }
+                        // --- Einde Noodgeval check ---
+
+
+                    }
+
+                    slot.addEventListener('click', (e) => {
+                        e.stopPropagation(); // Voorkom dat de kaart sleept bij klikken op slot
+                        GameLogic.handleSlotClick(data.id);
+                    });
+
+                    DOM.board.appendChild(slot);
+                });
+            },
+
+            /**
+             * NIEUW: Rendert het bouwmenu met tabbladen.
+             */
+            renderBuildMenu: () => {
+                DOM.buildTabsContainer.innerHTML = '';
+                DOM.buildPanelsContainer.innerHTML = '';
+
+                // Maak panelen voor elke categorie
+                for (const categoryId in CategoryNames) {
+                    const panel = document.createElement('div');
+                    panel.id = `panel-${categoryId}`;
+                    panel.className = 'build-panel'; // Standaard verborgen
+                    DOM.buildPanelsContainer.appendChild(panel);
+                }
+
+                // Maak tabknoppen en vul panelen
+                Object.keys(CategoryNames).forEach((categoryId, index) => {
+                    const categoryName = CategoryNames[categoryId];
+
+                    // Maak Tab Knop
+                    const tabButton = document.createElement('button');
+                    tabButton.textContent = categoryName;
+                    tabButton.className = 'tab-button text-gray-600 hover:text-indigo-600 px-3 py-1 font-medium rounded-t-lg';
+                    tabButton.dataset.tabId = categoryId;
+
+                    if (index === 0) {
+                        tabButton.classList.add('active'); // Activeer eerste tab
+                    }
+
+                    tabButton.addEventListener('click', () => UIManager.activateTab(categoryId));
+                    DOM.buildTabsContainer.appendChild(tabButton);
+
+                    // Vind het bijbehorende paneel
+                    const panel = DOM.buildPanelsContainer.querySelector(`#panel-${categoryId}`);
+
+                    // Vind en voeg gebouwen toe aan dit paneel
+                    Object.keys(BuildingTypes).forEach(type => {
+                        const building = BuildingTypes[type];
+                        // Toon alleen Lvl 1 of niet-upgradebare gebouwen
+                        const isBaseBuilding = type.endsWith('_1') || (!type.includes('_') && !Object.values(BuildingTypes).some(b => b.upgradeTo === type));
+
+                        if (building.category === categoryId && isBaseBuilding) {
+                            const button = UIManager.createBuildingButton(type);
+                            panel.appendChild(button);
+                        }
+                    });
+                });
+
+                // Activeer het eerste paneel
+                DOM.buildPanelsContainer.querySelector('.build-panel')?.classList.add('active');
+            },
+
+            /**
+             * NIEUW: Helper voor het maken van een bouwknop.
+             * @param {string} type - Het type gebouw.
+             * @returns {HTMLButtonElement}
+             */
+            createBuildingButton: (type) => {
+                const building = BuildingTypes[type];
+                const canAfford = GameState.saldo >= building.cost;
+                const button = document.createElement('button');
+
+                button.className = `building-button font-bold py-2 px-4 rounded-xl shadow-md transition-all duration-200 w-40 h-24 flex flex-col items-center justify-center text-center ${canAfford ? 'bg-blue-500 hover:bg-blue-700 text-white' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`;
+                button.dataset.type = type;
+
+                // Tooltip met alle info
+                const resourceText = [
+                    `⚡️ ${building.powerUsage || 0}`,
+                    `💧 ${building.waterUsage || 0}`,
+                    `🗑️ ${building.wasteProduction || 0}`
+                ].join(' | ');
+                const capacityText = [
+                    building.powerCapacity ? `⚡️ +${building.powerCapacity}` : '',
+                    building.waterCapacity ? `💧 +${building.waterCapacity}` : '',
+                    building.wasteCapacity ? `🗑️ +${building.wasteCapacity}` : ''
+                ].filter(Boolean).join(' | ');
+
+                button.title = `${building.description}\nKosten: €${building.cost.toLocaleString('nl-NL')}\nWinst: €${building.income.toLocaleString('nl-NL')}/tick\nGeluk: ${building.happinessEffect}\nBevolking: +${building.population}\nVerbruik: ${resourceText}\n${capacityText ? `Productie: ${capacityText}` : ''}`;
+
+                // Inhoud van de knop
+                button.innerHTML = `
+                    <span class="text-2xl">${building.emoji}</span>
+                    <span class="text-xs font-semibold">${building.name}</span>
+                    <span class="text-xs font-bold">€${building.cost.toLocaleString('nl-NL')}</span>
+                `;
+
+                if (!canAfford) {
+                    button.disabled = true;
+                }
+
+                button.addEventListener('click', (e) => {
+                    e.stopPropagation(); // Voorkom tab-wissel
+                    if (GameState.selectedBuilding === type) {
+                        GameState.selectedBuilding = null;
+                        UIManager.updateBuildMenuHighlights();
+                        UIManager.showMessage('Selectie ongedaan gemaakt.', 'info');
+                    } else {
+                        GameState.selectedBuilding = type;
+                        UIManager.updateBuildMenuHighlights();
+                        UIManager.showMessage(`Geselecteerd: ${building.name}. Klik op een leeg slot.`, 'info');
+                    }
+                });
+                return button;
+            },
+
+            /**
+             * NIEUW: Activeert een specifiek tabblad in het bouwmenu.
+             * @param {string} tabId - De categorie-ID.
+             */
+            activateTab: (tabId) => {
+                // Deactiveer alle tabknoppen en panelen
+                DOM.buildTabsContainer.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                DOM.buildPanelsContainer.querySelectorAll('.build-panel').forEach(panel => panel.classList.remove('active'));
+
+                // Activeer de juiste
+                DOM.buildTabsContainer.querySelector(`[data-tab-id="${tabId}"]`)?.classList.add('active');
+                DOM.buildPanelsContainer.querySelector(`#panel-${tabId}`)?.classList.add('active');
+            },
+
+
+            /**
+             * Werkt de visuele selectie (ring) op de bouwknoppen bij.
+             */
+            updateBuildMenuHighlights: () => {
+                DOM.buildPanelsContainer.querySelectorAll('.building-button').forEach(btn => {
+                    if (btn.dataset.type === GameState.selectedBuilding) {
+                        btn.classList.add('ring-4', 'ring-indigo-300', 'ring-offset-2');
+                    } else {
+                        btn.classList.remove('ring-4', 'ring-indigo-300', 'ring-offset-2');
+                    }
+                });
+            },
+
+            /**
+             * Werkt de knoppen in het bouwmenu bij op basis van huidig saldo.
+             */
+            updateBuildMenuAffordability: () => {
+                DOM.buildPanelsContainer.querySelectorAll('.building-button').forEach(btn => {
+                    const type = btn.dataset.type;
+                    const building = BuildingTypes[type];
+                    if (!building) return;
+
+                    const canAfford = GameState.saldo >= building.cost;
+
+                    if (canAfford) {
+                        btn.disabled = false;
+                        btn.className = `building-button font-bold py-2 px-4 rounded-xl shadow-md transition-all duration-200 w-40 h-24 flex flex-col items-center justify-center text-center bg-blue-500 hover:bg-blue-700 text-white`;
+                    } else {
+                        btn.disabled = true;
+                        btn.className = `building-button font-bold py-2 px-4 rounded-xl shadow-md transition-all duration-200 w-40 h-24 flex flex-col items-center justify-center text-center bg-gray-300 text-gray-500 cursor-not-allowed`;
+                    }
+
+                    if (type === GameState.selectedBuilding) {
+                        btn.classList.add('ring-4', 'ring-indigo-300', 'ring-offset-2');
+                    }
+                });
+            },
+
+            updateMoney: () => {
+                DOM.moneyDisplay.textContent = `Saldo: €${Math.floor(GameState.saldo).toLocaleString('nl-NL')}`;
+            },
+
+            updateHappiness: () => {
+                const happiness = Math.floor(GameState.happiness);
+                let colorClass = 'text-yellow-600', bgClass = 'bg-yellow-50';
+                if (happiness >= 75) { colorClass = 'text-green-600'; bgClass = 'bg-green-50'; }
+                else if (happiness <= 40) { colorClass = 'text-red-600'; bgClass = 'bg-red-50'; }
+                DOM.happinessDisplay.className = `text-2xl font-extrabold ${colorClass} ${bgClass} px-4 py-2 rounded-xl shadow-inner transition-colors duration-500`;
+                DOM.happinessDisplay.textContent = `Geluk: ${happiness} / 100`;
+            },
+
+            updateDayNightCycle: () => {
+                if (GameState.currentDayTime === 'day') {
+                    DOM.dayTimeDisplay.textContent = 'Tijd: ☀️ Dag';
+                    DOM.nightOverlay.classList.remove('is-night');
+                    DOM.body.classList.remove('bg-gray-400');
+                    DOM.body.classList.add('bg-gray-100');
+                } else {
+                    DOM.dayTimeDisplay.textContent = 'Tijd: 🌙 Nacht';
+                    DOM.nightOverlay.classList.add('is-night');
+                    DOM.body.classList.add('bg-gray-400');
+                    DOM.body.classList.remove('bg-gray-100');
+                }
+            },
+
+            /**
+             * NIEUW: Werkt de resource-statistieken bij (Stroom, Water, Afval).
+             */
+            updateResourceStats: () => {
+                const { power, water, waste } = GameState;
+
+                // Stroom
+                DOM.powerStatsDisplay.textContent = `⚡️ ${power.usage} / ${power.capacity}`;
+                DOM.powerStatsDisplay.classList.toggle('over-capacity', power.usage > power.capacity && power.capacity > 0);
+
+                // Water
+                DOM.waterStatsDisplay.textContent = `💧 ${water.usage} / ${water.capacity}`;
+                DOM.waterStatsDisplay.classList.toggle('over-capacity', water.usage > water.capacity && water.capacity > 0);
+
+                // Afval
+                DOM.wasteStatsDisplay.textContent = `🗑️ ${waste.usage} / ${waste.capacity}`;
+                DOM.wasteStatsDisplay.classList.toggle('over-capacity', waste.usage > waste.capacity && waste.capacity > 0);
+            },
+
+            showMessage: (text, type = 'info') => {
+                let bgColor = 'bg-indigo-600', icon = 'ℹ️';
+                if (type === 'error') { bgColor = 'bg-red-600'; icon = '❌'; }
+                if (type === 'event') { bgColor = 'bg-yellow-500'; icon = '🎉'; }
+                if (type === 'emergency') { bgColor = 'bg-red-700'; icon = '🚨'; } // Nieuw type
+                DOM.messageBox.innerHTML = `<span class="text-xl">${icon}</span> <span>${text}</span>`;
+                DOM.messageBox.className = `fixed bottom-4 right-4 p-3 rounded-xl shadow-2xl z-50 transition-opacity duration-300 ${bgColor} text-white flex items-center gap-2`;
+                setTimeout(() => {
+                    DOM.messageBox.classList.add('hidden');
+                }, 4000);
+            },
+
+            openModal: (type, slotId = null) => {
+                let htmlContent = '';
+                const stats = GameLogic.calculateStats(); // Zorg dat we verse stats hebben
+
+                switch (type) {
+                    case 'finance': htmlContent = UIManager.getFinanceMenuHTML(stats); break;
+                    case 'population': htmlContent = UIManager.getPopulationMenuHTML(stats); break;
+                    case 'upgrade': if (slotId) { htmlContent = UIManager.getUpgradeMenuHTML(slotId, stats); } break;
+                    case 'confirmReset': htmlContent = UIManager.getConfirmResetHTML(); break;
+                }
+                DOM.modalContent.innerHTML = htmlContent;
+                DOM.statsModal.classList.add('active');
+            },
+
+            closeModal: (event) => {
+                if (event.target === DOM.statsModal) {
+                    DOM.statsModal.classList.remove('active');
+                }
+            },
+
+            // Helper voor sluitknop in modal
+            forceCloseModal: () => {
+                DOM.statsModal.classList.remove('active');
+            },
+
+            /**
+             * Get Finance Menu HTML (Geüpdatet met resource info)
+             */
+            getFinanceMenuHTML: (stats) => {
+                const incomeTextClass = stats.netEarned >= 0 ? 'text-green-600' : 'text-red-600';
+                const eventText = GameState.activeEvent ? `(Actief Evenement: ${GameState.activeEvent.title})` : '';
+                const resourceWarning = !stats.allResourcesOK ? `<p class="text-center font-bold text-red-600 p-2 bg-red-50 rounded-lg">WAARSCHUWING: Bronnentoevoer is onvoldoende! Inkomsten zijn gestopt.</p>` : '';
+
+                return `
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-indigo-800">Financieel Overzicht 💰</h2>
+                        <button onclick="UIManager.forceCloseModal()" class="text-gray-500 hover:text-gray-900 text-2xl font-bold">&times;</button>
+                    </div>
+                    ${resourceWarning}
+                    <div class="space-y-4 mt-4">
+                        <div class="p-3 bg-indigo-50 rounded-lg border-l-4 border-indigo-500">
+                            <p class="text-xl font-semibold text-gray-700">Huidig Saldo:</p>
+                            <p class="text-3xl font-extrabold text-green-700">€${Math.floor(GameState.saldo).toLocaleString('nl-NL')}</p>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div class="p-3 bg-gray-100 rounded-lg">
+                                <p class="font-medium text-gray-600">Potentiële Inkomsten (Bruto/Tick):</p>
+                                <p class="text-xl font-bold text-green-600">+€${Math.floor(stats.totalIncome).toLocaleString('nl-NL')}</p>
+                            </div>
+                            <div class="p-3 bg-gray-100 rounded-lg">
+                                <p class="font-medium text-gray-600">Geluks-Multiplier:</p>
+                                <p class="text-xl font-bold text-blue-600">x ${stats.incomeMultiplier.toFixed(2)}</p>
+                            </div>
+                        </div>
+                        <div class="p-3 bg-white shadow-md rounded-lg border-t-2 border-dashed border-gray-300">
+                            <p class="text-xl font-semibold text-gray-700">Netto Winst (Volgende Tick):</p>
+                            <p class="text-3xl font-extrabold ${incomeTextClass}">
+                                ${stats.netEarned >= 0 ? '+' : '-'}€${Math.floor(Math.abs(stats.netEarned)).toLocaleString('nl-NL')}
+                            </p>
+                            <p class="text-sm text-gray-500">${eventText}</p>
+                        </div>
+                        <div class="p-3 bg-gray-100 rounded-lg">
+                            <p class="font-medium text-gray-600">Totale Waarde van Gebouwen:</p>
+                            <p class="text-xl font-bold text-yellow-700">€${Math.floor(stats.totalBuildingValue).toLocaleString('nl-NL')}</p>
+                        </div>
+                        
+                        <hr class="my-4">
+                        
+                        <div>
+                             <p class="text-center text-gray-600 mb-2">Spel opslaan/resetten</p>
+                             <button 
+                                onclick="GameLogic.confirmReset()" 
+                                class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all duration-200">
+                                Reset Spel...
+                            </button>
+                            <p class="text-center text-xs text-gray-500 mt-2">Spel wordt automatisch opgeslagen.</p>
+                        </div>
+                    </div>
+                `;
+            },
+
+            /**
+             * Get Population Menu HTML (Geüpdatet met resource info)
+             */
+            getPopulationMenuHTML: (stats) => {
+                const sortedBuildings = Object.entries(stats.buildingCounts)
+                    .sort(([, countA], [, countB]) => countB - countA)
+                    .map(([name, count]) => {
+                        const building = Object.values(BuildingTypes).find(b => b.name === name);
+                        const effect = building.happinessEffect;
+                        const effectText = effect > 0 ? `+${effect}` : effect;
+                        const effectClass = effect > 0 ? 'text-green-500' : (effect < 0 ? 'text-red-500' : 'text-gray-500');
+                        return `<li class="flex justify-between p-2 border-b last:border-b-0">
+                                    <span>${building.emoji} ${name}</span>
+                                    <span>${count}x (<span class="${effectClass}">${effectText} Geluk/st</span>)</span>
+                                </li>`;
+                    }).join('');
+
+                const happinessChangeTextClass = stats.happinessChange >= 0 ? 'text-green-600' : 'text-red-600';
+
+                return `
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-indigo-800">Bevolking & Geluk 😊</h2>
+                        <button onclick="UIManager.forceCloseModal()" class="text-gray-500 hover:text-gray-900 text-2xl font-bold">&times;</button>
+                    </div>
+                    <div class="space-y-4">
+                        <div class="p-3 bg-indigo-50 rounded-lg border-l-4 border-indigo-500">
+                            <p class="text-xl font-semibold text-gray-700">Huidig Geluksniveau:</p>
+                            <p class="text-3xl font-extrabold text-yellow-700">${Math.floor(GameState.happiness)} / 100</p>
+                        </div>
+                         <div class="p-3 bg-gray-100 rounded-lg">
+                            <p class="font-medium text-gray-600">Totale Bevolking:</p>
+                            <p class="text-xl font-bold text-blue-600">${stats.totalPopulation.toLocaleString('nl-NL')}</p>
+                        </div>
+                        <div class="p-3 bg-gray-100 rounded-lg">
+                            <p class="font-medium text-gray-600">Totale Gelukseffect (per tick):</p>
+                            <p class="text-xl font-bold ${happinessChangeTextClass}">
+                                ${stats.happinessChange > 0 ? '+' : ''}${stats.happinessChange.toFixed(1)}
+                            </p>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2 text-center">
+                             <div class="p-2 bg-yellow-50 rounded-lg">
+                                <p class="font-medium text-sm text-yellow-800">Stroom</p>
+                                <p class="text-lg font-bold">⚡️ ${GameState.power.usage}/${GameState.power.capacity}</p>
+                             </div>
+                             <div class="p-2 bg-blue-50 rounded-lg">
+                                <p class="font-medium text-sm text-blue-800">Water</p>
+                                <p class="text-lg font-bold">💧 ${GameState.water.usage}/${GameState.water.capacity}</p>
+                             </div>
+                             <div class="p-2 bg-gray-100 rounded-lg">
+                                <p class="font-medium text-sm text-gray-800">Afval</p>
+                                <p class="text-lg font-bold">🗑️ ${GameState.waste.usage}/${GameState.waste.capacity}</p>
+                             </div>
+                        </div>
+                        
+                        <h3 class="text-xl font-semibold mt-4 text-indigo-700 border-b pb-1">Gebouwen Overzicht</h3>
+                        <ul class="bg-white rounded-lg p-2 border max-h-48 overflow-y-auto">
+                            ${stats.totalBuildings > 0 ? sortedBuildings : '<li class="text-center p-4 text-gray-500">Nog geen gebouwen geplaatst.</li>'}
+                        </ul>
+                    </div>
+                `;
+            },
+
+            /**
+             * Get Upgrade Menu HTML (Geüpdatet met resource info)
+             */
+            getUpgradeMenuHTML: (slotId, stats) => {
+                const buildingType = GameState.placedSlots[slotId];
+                const building = BuildingTypes[buildingType];
+                if (!building) return 'Fout: Gebouw niet gevonden.';
+
+                // --- NIEUW: Check of er een noodgeval is ---
+                const emergency = GameState.activeEmergencies.find(e => e.slotId === slotId);
+                if (emergency) {
+                    return `
+                         <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-3xl font-bold text-red-700">NOODGEVAL!</h2>
+                            <button onclick="UIManager.forceCloseModal()" class="text-gray-500 hover:text-gray-900 text-2xl font-bold">&times;</button>
+                        </div>
+                        <p class="text-center text-xl p-4 bg-red-100 rounded-lg">
+                            Er is een <strong>${emergency.type}</strong> bij dit gebouw! Hulp is onderweg.
+                        </p>
+                        <p class="text-center mt-4">U kunt dit gebouw niet aanpassen of slopen totdat het noodgeval is opgelost.</p>
+                    `;
+                }
+                // --- Einde noodgeval check ---
+
+                const refund = GameLogic.calculateTotalRefund(slotId);
+                let upgradeButtonHTML = '';
+
+                // Toon huidig verbruik
+                const currentStatsHTML = `
+                    <div class="grid grid-cols-3 gap-2 text-center my-4">
+                         <div class="p-2 bg-yellow-50 rounded-lg" title="Huidig stroomverbruik">
+                            <p class="text-lg font-bold">⚡️ ${building.powerUsage || 0}</p>
+                         </div>
+                         <div class="p-2 bg-blue-50 rounded-lg" title="Huidig waterverbruik">
+                            <p class="text-lg font-bold">💧 ${building.waterUsage || 0}</p>
+                         </div>
+                         <div class="p-2 bg-gray-100 rounded-lg" title="Huidige afvalproductie">
+                            <p class="text-lg font-bold">🗑️ ${building.wasteProduction || 0}</p>
+                         </div>
+                    </div>
+                `;
+
+                if (building.upgradeTo) {
+                    const nextBuilding = BuildingTypes[building.upgradeTo];
+                    const canAffordUpgrade = GameState.saldo >= nextBuilding.cost;
+
+                    // Bereken resource *verschil*
+                    const deltaPower = (nextBuilding.powerUsage || 0) - (building.powerUsage || 0);
+                    const deltaWater = (nextBuilding.waterUsage || 0) - (building.waterUsage || 0);
+                    const deltaWaste = (nextBuilding.wasteProduction || 0) - (building.wasteProduction || 0);
+                    // Capaciteit
+                    const deltaPowerCap = (nextBuilding.powerCapacity || 0) - (building.powerCapacity || 0);
+                    const deltaWaterCap = (nextBuilding.waterCapacity || 0) - (building.waterCapacity || 0);
+                    const deltaWasteCap = (nextBuilding.wasteCapacity || 0) - (building.wasteCapacity || 0);
+
+                    // Controleer of upgrade kan
+                    const { canUpgrade, reason } = GameLogic.checkUpgradeResourceViability(building, nextBuilding);
+                    const canAffordAndUpgrade = canAffordUpgrade && canUpgrade;
+
+                    upgradeButtonHTML = `
+                        <p class="text-center text-lg mb-2">Upgrade naar: <strong>${nextBuilding.name} ${nextBuilding.emoji}</strong></p>
+                        <p class="text-center text-gray-600 mb-2">${nextBuilding.description}</p>
+                        
+                        <!-- Toon resource verschillen -->
+                        <div class="grid grid-cols-3 gap-2 text-center my-2 text-sm">
+                            <p class="font-medium ${deltaPower > 0 ? 'text-red-600' : 'text-green-600'}">⚡️ ${deltaPower > 0 ? '+' : ''}${deltaPower}</p>
+                            <p class="font-medium ${deltaWater > 0 ? 'text-red-600' : 'text-green-600'}">💧 ${deltaWater > 0 ? '+' : ''}${deltaWater}</p>
+                            <p class="font-medium ${deltaWaste > 0 ? 'text-red-600' : 'text-green-600'}">🗑️ ${deltaWaste > 0 ? '+' : ''}${deltaWaste}</p>
+                        </div>
+                        <!-- Toon capaciteit verschillen -->
+                         <div class="grid grid-cols-3 gap-2 text-center my-2 text-sm">
+                            <p class="font-medium text-green-600"> ${deltaPowerCap > 0 ? `⚡️ +${deltaPowerCap}` : ''}</p>
+                            <p class="font-medium text-green-600"> ${deltaWaterCap > 0 ? `💧 +${deltaWaterCap}` : ''}</p>
+                            <p class="font-medium text-green-600"> ${deltaWasteCap > 0 ? `🗑️ +${deltaWasteCap}` : ''}</p>
+                        </div>
+
+                        <button 
+                            onclick="GameLogic.upgradeBuilding('${slotId}')" 
+                            class="w-full font-bold py-3 px-4 rounded-xl shadow-lg transition-all duration-200 text-white
+                            ${canAffordAndUpgrade ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'}"
+                            ${!canAffordAndUpgrade ? 'disabled' : ''}>
+                            ${canAffordAndUpgrade ? `Upgrade voor €${nextBuilding.cost.toLocaleString('nl-NL')}` : (canAffordUpgrade ? reason : `Niet genoeg geld`)}
+                        </button>
+                    `;
+                } else {
+                    upgradeButtonHTML = `
+                        <p class="text-center text-lg font-semibold text-blue-700 mb-4">Dit gebouw heeft het maximale level bereikt!</p>
+                    `;
+                }
+
+                return `
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-indigo-800">${building.name} ${building.emoji}</h2>
+                        <button onclick="UIManager.forceCloseModal()" class="text-gray-500 hover:text-gray-900 text-2xl font-bold">&times;</button>
+                    </div>
+                    ${currentStatsHTML}
+                    <div class="space-y-4">
+                        ${upgradeButtonHTML}
+                        <hr class="my-6">
+                        <p class="text-center text-gray-600 mb-2">Of u kunt dit gebouw slopen (geeft 50% van *totale* investering terug):</p>
+                        <button 
+                            onclick="GameLogic.sloopBuilding('${slotId}')" 
+                            class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all duration-200">
+                            Slopen (voor €${refund.toLocaleString('nl-NL')})
+                        </button>
+                    </div>
+                `;
+            },
+
+            /**
+             * Get Confirm Reset HTML (Onveranderd, maar forceert sluiten)
+             */
+            getConfirmResetHTML: () => {
+                return `
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-red-700">Spel Resetten</h2>
+                        <button onclick="UIManager.forceCloseModal()" class="text-gray-500 hover:text-gray-900 text-2xl font-bold">&times;</button>
+                    </div>
+                    <div class="space-y-4">
+                        <p class="text-center text-lg text-gray-800">
+                            Weet u zeker dat u het spel wilt resetten? <strong>Alle voortgang gaat verloren</strong> en kan niet ongedaan gemaakt worden.
+                        </p>
+                        <div class="flex gap-4 mt-6">
+                             <button 
+                                onclick="UIManager.forceCloseModal()" 
+                                class="w-full bg-gray-500 hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all duration-200">
+                                Annuleren
+                            </button>
+                            <button 
+                                onclick="GameLogic.resetGame()" 
+                                class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all duration-200">
+                                Ja, Reset Spel
+                            </button>
+                        </div>
+                    </div>
+                `;
+            },
+
+            /**
+             * --- NIEUW: Hulpvoertuig Animatie ---
+             * Animeert een voertuig van A naar B.
+             */
+            animateVehicle: (fromSlotId, toSlotId, type) => {
+                const vehicle = document.createElement('div');
+                vehicle.className = 'emergency-vehicle';
+                vehicle.textContent = EmergencyManager.emojiMap[type] || '🚨';
+
+                const fromSlotData = SlotsData.find(s => s.id === fromSlotId);
+                const toSlotData = SlotsData.find(s => s.id === toSlotId);
+
+                if (!fromSlotData || !toSlotData) {
+                    console.error("Kan slot-coördinaten niet vinden voor animatie.");
+                    return;
+                }
+
+                // Haal pixelwaarden op (verwijder 'px' en converteer naar getal)
+                const fromX = parseInt(fromSlotData.left, 10) + 40; // Midden van slot
+                const fromY = parseInt(fromSlotData.top, 10) + 40;
+                const toX = parseInt(toSlotData.left, 10) + 40;
+                const toY = parseInt(toSlotData.top, 10) + 40;
+
+                vehicle.style.left = `${fromX}px`;
+                vehicle.style.top = `${fromY}px`;
+
+                DOM.board.appendChild(vehicle);
+                GameState.sfx.siren?.triggerAttackRelease('A5', '1n'); // Speel sirene af
+
+                // Gebruik Web Animations API
+                const animation = vehicle.animate([
+                    { transform: `translate(0, 0) rotate(0deg)` },
+                    { transform: `translate(${toX - fromX}px, ${toY - fromY}px) rotate(0deg)` }
+                ], {
+                    duration: GameSettings.EMERGENCY_VEHICLE_SPEED_MS,
+                    easing: 'ease-in-out'
+                });
+
+                // Wiebel-effect (optioneel)
+                let wobble = 1;
+                const wobbleInterval = setInterval(() => {
+                    vehicle.style.transform = `translate(${vehicle.style.transform}) rotate(${wobble * 5}deg)`;
+                    wobble *= -1;
+                }, 200);
+
+                animation.onfinish = () => {
+                    clearInterval(wobbleInterval);
+                    EmergencyManager.resolveEmergency(toSlotId, type);
+                    vehicle.remove();
+                };
+            }
+        };
+
+        /**
+         * =================================================================
+         * Sectie 5: Game Logic
+         * Beheert de spelregels, berekeningen en statuswijzigingen.
+         * =================================================================
+         */
+        const GameLogic = {
+
+            initAudio: () => {
+                try {
+                    // (Audio-initialisatie code onveranderd)
+                    GameState.sfx.build = new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.05, release: 0.2 } }).toDestination();
+                    GameState.sfx.sloop = new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.2 } }).toDestination();
+                    GameState.sfx.upgrade = new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.05, decay: 0.3, sustain: 0.1, release: 0.5 } }).toDestination();
+                    GameState.sfx.income = new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination();
+                    GameState.sfx.error = new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 } }).toDestination();
+                    GameState.sfx.event = new Tone.Synth({ oscillator: { type: 'pulse', width: 0.6 }, envelope: { attack: 0.1, decay: 0.5, sustain: 0.1, release: 1 } }).toDestination();
+                    // NIEUW: Sirene
+                    GameState.sfx.siren = new Tone.Synth({ oscillator: { type: 'sawtooth' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.5 } }).toDestination();
+
+                } catch (e) {
+                    console.error("Kon Tone.js niet initialiseren:", e);
+                    UIManager.showMessage("Kon geluidseffecten niet laden.", "error");
+                }
+            },
+
+            startGameLoop: () => {
+                setInterval(GameLogic.tick, GameSettings.TICK_INTERVAL);
+                setInterval(GameLogic.saveGame, GameSettings.TICK_INTERVAL * 3); // Sla elke 30s op
+            },
+
+            /**
+             * De 'tick' functie. Nu met resource management.
+             * (AANGEPAST MET NOODGEVAL-LOGICA)
+             */
+            tick: () => {
+                if (!GameState.isGameStarted) return;
+
+                // 1. Bereken alle stats en update de GameState
+                const stats = GameLogic.calculateStats();
+                GameLogic.updateStatsFromScratch(stats); // Update GameState.power etc.
+
+                const allResourcesOK = stats.allResourcesOK;
+                let happinessChange = stats.happinessChange;
+
+                // 2. Pas penalties toe als resources niet OK zijn
+                if (!allResourcesOK) {
+                    happinessChange -= 5; // Zware straf op geluk
+                    if (GameState.power.usage > GameState.power.capacity) UIManager.showMessage('GEEN STROOM! Gebouwen werken niet.', 'error');
+                    if (GameState.water.usage > GameState.water.capacity) UIManager.showMessage('GEEN WATER! Gebouwen werken niet.', 'error');
+                    if (GameState.waste.usage > GameState.waste.capacity) UIManager.showMessage('AFVAL HOOPT OP! Gebouwen werken niet.', 'error');
+                }
+
+                // 3. Geluk updaten
+                GameState.happiness = Math.min(100, Math.max(0, GameState.happiness + happinessChange));
+                if (GameState.happiness === 0 && allResourcesOK) {
+                    UIManager.showMessage('WAARSCHUWING: Uw bevolking is extreem ongelukkig! Geen inkomsten.', 'error');
+                }
+
+                // 4. Inkomen toevoegen (alleen als resources OK zijn)
+                const earned = stats.netEarned; // netEarned is al 0 als resources niet OK zijn
+                GameState.saldo += earned;
+
+                // 5. Melding van de tick
+                if (earned > 0) {
+                    // UIManager.showMessage(`TICK! Saldo +€${Math.floor(earned).toLocaleString('nl-NL')} (Geluk x${stats.incomeMultiplier.toFixed(2)}). Geluk: ${happinessChange > 0 ? '+' : ''}${happinessChange.toFixed(1)}.`, 'info');
+                    GameState.sfx.income?.triggerAttackRelease('C5', '8n');
+                } else if (earned < 0) {
+                    // UIManager.showMessage(`TICK! Saldo -€${Math.floor(Math.abs(earned)).toLocaleString('nl-NL')}. Geluk: ${happinessChange.toFixed(1)}.`, 'error');
+                } else if (allResourcesOK && earned === 0) {
+                    // Geen inkomsten, maar alles is ok (bv. alleen parken)
+                }
+
+                // 6. Update Dag/Nacht-cyclus
+                GameState.dayNightTickCounter++;
+                if (GameState.dayNightTickCounter >= GameSettings.DAY_NIGHT_TICK_DURATION) {
+                    GameState.dayNightTickCounter = 0;
+                    GameState.currentDayTime = (GameState.currentDayTime === 'day') ? 'night' : 'day';
+                    UIManager.updateDayNightCycle();
+                    if (GameState.currentDayTime === 'day') {
+                        GameLogic.handleRandomEventLogic();
+                    }
+                }
+
+                // --- NIEUW: Update Noodgevallen ---
+                if (GameState.currentDayTime === 'day') { // Noodgevallen gebeuren alleen overdag
+                    EmergencyManager.checkAndTriggerEmergency();
+                }
+                EmergencyManager.updateEmergencies(); // Update timers, etc.
+                // --- Einde Noodgeval update ---
+
+                // 7. Update het actieve evenement
+                GameLogic.updateActiveEvent();
+
+                // 8. Update alle UI-elementen
+                UIManager.updateMoney();
+                UIManager.updateHappiness();
+                UIManager.updateResourceStats(); // Essentieel
+                UIManager.updateBuildMenuAffordability();
+                UIManager.renderBoard(); // Render bord opnieuw voor no-power en noodgevallen
+            },
+
+            /**
+             * NIEUW: Helper die stats (uit calculateStats) in de GameState zet.
+             * @param {Object} stats - Het berekende statistieken-object.
+             */
+            updateStatsFromScratch: (stats) => {
+                if (!stats) stats = GameLogic.calculateStats();
+                GameState.power = { usage: stats.totalPowerUsage, capacity: stats.totalPowerCapacity };
+                GameState.water = { usage: stats.totalWaterUsage, capacity: stats.totalWaterCapacity };
+                GameState.waste = { usage: stats.totalWasteUsage, capacity: stats.totalWasteCapacity };
+            },
+
+            /**
+             * NIEUW: Helper om snel te checken of alles OK is.
+             * @returns {boolean}
+             */
+            areAllResourcesOK: () => {
+                return GameState.power.usage <= GameState.power.capacity &&
+                    GameState.water.usage <= GameState.water.capacity &&
+                    GameState.waste.usage <= GameState.waste.capacity;
+            },
+
+            /**
+             * Berekent alle statistieken van de stad (inkomsten, geluk, etc.).
+             * @returns {Object} Een object met alle berekende statistieken.
+             */
+            calculateStats: () => {
+                let totalIncome = 0;
+                let happinessChange = 0;
+                let totalBuildingValue = 0;
+                let totalPopulation = 0;
+                const buildingCounts = {};
+
+                // NIEUW: Resource Tellers - Start met basiscapaciteit
+                let totalPowerUsage = 0;
+                let totalWaterUsage = 0;
+                let totalWasteUsage = 0; // 'usage' = productie
+                let totalPowerCapacity = GameSettings.BASE_POWER_CAPACITY;
+                let totalWaterCapacity = GameSettings.BASE_WATER_CAPACITY;
+                let totalWasteCapacity = GameSettings.BASE_WASTE_CAPACITY;
+
+
+                for (const slotId in GameState.placedSlots) {
+                    const buildingType = GameState.placedSlots[slotId];
+                    const building = BuildingTypes[buildingType];
+
+                    if (building) {
+                        totalIncome += building.income;
+                        happinessChange += building.happinessEffect;
+                        totalPopulation += building.population;
+                        totalBuildingValue += GameLogic.calculateTotalInvestment(buildingType);
+                        buildingCounts[building.name] = (buildingCounts[building.name] || 0) + 1;
+
+                        // Tel resources
+                        totalPowerUsage += building.powerUsage || 0;
+                        totalWaterUsage += building.waterUsage || 0;
+                        totalWasteUsage += building.wasteProduction || 0;
+                        totalPowerCapacity += building.powerCapacity || 0;
+                        totalWaterCapacity += building.waterCapacity || 0;
+                        totalWasteCapacity += building.wasteCapacity || 0;
+                    }
+                }
+
+                // Basis geluksverandering
+                if (happinessChange === 0 && totalPopulation > 0 && GameState.happiness > 50) happinessChange = -0.5;
+                else if (happinessChange === 0 && totalPopulation > 0 && GameState.happiness < 30) happinessChange = -2;
+                else if (totalPopulation === 0 && GameState.happiness < 50) happinessChange = 0.5; // Herstelt langzaam naar 50
+
+                // Bereken de multiplier
+                const incomeMultiplier = GameState.happiness / 100;
+
+                // Pas eventuele actieve event-multipliers toe
+                let eventMultiplier = 1.0;
+                if (GameState.activeEvent && GameState.activeEvent.effect.type === 'income_multiplier') {
+                    eventMultiplier = GameState.activeEvent.effect.value;
+                }
+
+                // Controleer of alle resources OK zijn
+                const allResourcesOK = totalPowerUsage <= totalPowerCapacity &&
+                    totalWaterUsage <= totalWaterCapacity &&
+                    totalWasteUsage <= totalWasteCapacity;
+
+                // Netto inkomen (0 als resources niet OK zijn, of als geluk 0 is)
+                const netEarned = allResourcesOK && GameState.happiness > 0 ? (totalIncome * incomeMultiplier) * eventMultiplier : 0;
+
+                return {
+                    totalIncome,
+                    happinessChange,
+                    totalBuildingValue,
+                    totalPopulation,
+                    incomeMultiplier,
+                    eventMultiplier,
+                    netEarned,
+                    buildingCounts,
+                    totalBuildings: Object.keys(GameState.placedSlots).length,
+                    // Resource stats
+                    totalPowerUsage, totalWaterUsage, totalWasteUsage,
+                    totalPowerCapacity, totalWaterCapacity, totalWasteCapacity,
+                    allResourcesOK
+                };
+            },
+
+            handleSlotClick: (slotId) => {
+                const isOccupied = !!GameState.placedSlots[slotId];
+
+                // --- NIEUW: Blokkeer acties tijdens noodgeval ---
+                if (GameState.activeEmergencies.some(e => e.slotId === slotId)) {
+                    UIManager.showMessage("Kan dit gebouw niet gebruiken tijdens een noodgeval!", "error");
+                    GameState.sfx.error?.triggerAttackRelease('A2', '8n');
+                    UIManager.openModal('upgrade', slotId); // Toon de noodgeval-modal
+                    return;
+                }
+                // --- Einde check ---
+
+                if (GameState.isSloopMode) {
+                    if (isOccupied) GameLogic.sloopBuilding(slotId);
+                    else { UIManager.showMessage('Dit slot is al leeg.', 'error'); GameState.sfx.error?.triggerAttackRelease('A2', '8n'); }
+                } else if (GameState.selectedBuilding) {
+                    if (isOccupied) { UIManager.showMessage('Dit slot is al bezet. Klik om te upgraden.', 'error'); GameState.sfx.error?.triggerAttackRelease('A2', '8n'); }
+                    else GameLogic.placeBuilding(slotId, GameState.selectedBuilding);
+                } else {
+                    if (isOccupied) UIManager.openModal('upgrade', slotId);
+                    else UIManager.showMessage('Selecteer eerst een gebouw uit het menu om hier te bouwen.', 'info');
+                }
+            },
+
+            /**
+             * Plaatst een gebouw op een leeg slot.
+             */
+            placeBuilding: (slotId, type) => {
+                const building = BuildingTypes[type];
+
+                // 1. Controleer geld
+                if (GameState.saldo < building.cost) {
+                    UIManager.showMessage(`Niet genoeg saldo om ${building.name} te kopen! (€${building.cost.toLocaleString('nl-NL')} nodig)`, 'error');
+                    GameState.sfx.error?.triggerAttackRelease('A2', '8n');
+                    return;
+                }
+
+                // 2. Controleer resources
+                const { canPlace, reason } = GameLogic.checkPlacementResourceViability(building);
+                if (!canPlace) {
+                    UIManager.showMessage(reason, 'error');
+                    GameState.sfx.error?.triggerAttackRelease('A2', '8n');
+                    return;
+                }
+
+                // 3. Alles OK: Betaal en Plaats
+                GameState.saldo -= building.cost;
+                GameState.placedSlots[slotId] = type;
+
+                // 4. Update alles
+                GameLogic.updateStatsFromScratch(); // Herbereken en update GameState
+                UIManager.showMessage(`${building.name} is gebouwd!`, 'info');
+                UIManager.renderBoard();
+                UIManager.updateMoney();
+                UIManager.updateResourceStats();
+                UIManager.updateBuildMenuAffordability();
+
+                GameState.selectedBuilding = null;
+                UIManager.updateBuildMenuHighlights();
+                GameState.sfx.build?.triggerAttackRelease('C4', '8n');
+                GameLogic.saveGame();
+            },
+
+            /**
+             * NIEUW: Controleert of een *nieuw* gebouw geplaatst kan worden.
+             * @param {BuildingData} building - Het gebouw dat geplaatst gaat worden.
+             * @returns {{canPlace: boolean, reason: string}}
+             */
+            checkPlacementResourceViability: (building) => {
+                const { power, water, waste } = GameState;
+
+                const futurePowerUsage = power.usage + (building.powerUsage || 0);
+                const futurePowerCap = power.capacity + (building.powerCapacity || 0);
+                if (futurePowerUsage > futurePowerCap) {
+                    return { canPlace: false, reason: 'Niet genoeg stroomcapaciteit! Bouw een centrale.' };
+                }
+
+                const futureWaterUsage = water.usage + (building.waterUsage || 0);
+                const futureWaterCap = water.capacity + (building.waterCapacity || 0);
+                if (futureWaterUsage > futureWaterCap) {
+                    return { canPlace: false, reason: 'Niet genoeg watercapaciteit! Bouw een watertoren.' };
+                }
+
+                const futureWasteUsage = waste.usage + (building.wasteProduction || 0);
+                const futureWasteCap = waste.capacity + (building.wasteCapacity || 0);
+                if (futureWasteUsage > futureWasteCap) {
+                    return { canPlace: false, reason: 'Niet genoeg afvalverwerking! Bouw een vuilstort.' };
+                }
+
+                return { canPlace: true, reason: '' };
+            },
+
+            calculateTotalInvestment: (buildingType) => {
+                let totalInvested = 0;
+                let currentType = buildingType;
+                while (currentType) {
+                    const currentBuilding = BuildingTypes[currentType];
+                    if (!currentBuilding) break;
+                    totalInvested += currentBuilding.cost;
+                    const prevType = Object.keys(BuildingTypes).find(key => BuildingTypes[key].upgradeTo === currentType);
+                    currentType = prevType;
+                }
+                return totalInvested;
+            },
+
+            calculateTotalRefund: (slotId) => {
+                const buildingType = GameState.placedSlots[slotId];
+                if (!buildingType) return 0;
+                const totalInvested = GameLogic.calculateTotalInvestment(buildingType);
+                return Math.floor(totalInvested * GameSettings.DEFAULT_REFUND_PERCENTAGE);
+            },
+
+            /**
+             * Sloop een gebouw.
+             * (AANGEPAST met 'isDestroyed' voor noodgevallen)
+             */
+            sloopBuilding: (slotId, isDestroyed = false) => {
+                const buildingType = GameState.placedSlots[slotId];
+                if (!buildingType) return;
+
+                // --- NIEUW: Blokkeer acties tijdens noodgeval ---
+                if (!isDestroyed && GameState.activeEmergencies.some(e => e.slotId === slotId)) {
+                    UIManager.showMessage("Kan niet slopen tijdens een noodgeval!", "error");
+                    GameState.sfx.error?.triggerAttackRelease('A2', '8n');
+                    return;
+                }
+                // --- Einde check ---
+
+                let refund = 0;
+                if (isDestroyed) {
+                    GameState.happiness = Math.max(0, GameState.happiness - 15); // Zware straf
+                    UIManager.showMessage(`🚨 ${BuildingTypes[buildingType].name} is verwoest! Geluk -15.`, 'emergency');
+                } else {
+                    refund = GameLogic.calculateTotalRefund(slotId);
+                    GameState.saldo += refund;
+                    UIManager.showMessage(`Gebouw gesloopt! €${refund.toLocaleString('nl-NL')} terugbetaald.`, 'info');
+                    GameState.sfx.sloop?.triggerAttackRelease('2n');
+                }
+
+                delete GameState.placedSlots[slotId];
+                // Verwijder ook uit noodgevallen-lijst (voor het geval het verwoest is)
+                EmergencyManager.resolveEmergency(slotId, null, true); // Stilzwijgend oplossen
+
+                // Update alles
+                GameLogic.updateStatsFromScratch();
+                UIManager.renderBoard();
+                UIManager.updateMoney();
+                UIManager.updateHappiness(); // Happiness is mogelijk gedaald
+                UIManager.updateResourceStats();
+                UIManager.updateBuildMenuAffordability();
+                UIManager.forceCloseModal(); // Sluit upgrade-menu
+
+                GameLogic.saveGame();
+            },
+
+            upgradeBuilding: (slotId) => {
+                const buildingType = GameState.placedSlots[slotId];
+                const building = BuildingTypes[buildingType];
+                if (!building || !building.upgradeTo) return;
+
+                // --- NIEUW: Blokkeer acties tijdens noodgeval ---
+                if (GameState.activeEmergencies.some(e => e.slotId === slotId)) {
+                    UIManager.showMessage("Kan niet upgraden tijdens een noodgeval!", "error");
+                    GameState.sfx.error?.triggerAttackRelease('A2', '8n');
+                    return;
+                }
+                // --- Einde check ---
+
+                const nextBuilding = BuildingTypes[building.upgradeTo];
+
+                // 1. Controleer geld
+                if (GameState.saldo < nextBuilding.cost) {
+                    UIManager.showMessage(`Niet genoeg saldo voor de upgrade! (€${nextBuilding.cost.toLocaleString('nl-NL')} nodig)`, 'error');
+                    GameState.sfx.error?.triggerAttackRelease('A2', '8n');
+                    return;
+                }
+
+                // 2. Controleer resources
+                const { canUpgrade, reason } = GameLogic.checkUpgradeResourceViability(building, nextBuilding);
+                if (!canUpgrade) {
+                    UIManager.showMessage(reason, 'error');
+                    GameState.sfx.error?.triggerAttackRelease('A2', '8n');
+                    return;
+                }
+
+                // 3. Alles OK: Betaal en Upgrade
+                GameState.saldo -= nextBuilding.cost;
+                GameState.placedSlots[slotId] = building.upgradeTo;
+
+                // 4. Update alles
+                GameLogic.updateStatsFromScratch();
+                UIManager.showMessage(`${building.name} geüpgraded naar ${nextBuilding.name}!`, 'info');
+                UIManager.renderBoard();
+                UIManager.updateMoney();
+                UIManager.updateResourceStats();
+                UIManager.updateBuildMenuAffordability();
+                UIManager.forceCloseModal();
+
+                GameState.sfx.upgrade?.triggerAttackRelease('E5', '4n');
+                GameLogic.saveGame();
+            },
+
+            /**
+             * NIEUW: Controleert of een *upgrade* mogelijk is qua resources.
+             * @param {BuildingData} oldBuilding - Het huidige gebouw.
+             * @param {BuildingData} newBuilding - Het gebouw waarnaar geüpgraded wordt.
+             * @returns {{canUpgrade: boolean, reason: string}}
+             */
+            checkUpgradeResourceViability: (oldBuilding, newBuilding) => {
+                const { power, water, waste } = GameState;
+
+                // Bereken het *verschil* (delta)
+                const deltaPower = (newBuilding.powerUsage || 0) - (oldBuilding.powerUsage || 0);
+                const deltaWater = (newBuilding.waterUsage || 0) - (oldBuilding.waterUsage || 0);
+                const deltaWaste = (newBuilding.wasteProduction || 0) - (oldBuilding.wasteProduction || 0);
+
+                const deltaPowerCap = (newBuilding.powerCapacity || 0) - (oldBuilding.powerCapacity || 0);
+                const deltaWaterCap = (newBuilding.waterCapacity || 0) - (oldBuilding.waterCapacity || 0);
+                const deltaWasteCap = (newBuilding.wasteCapacity || 0) - (oldBuilding.wasteCapacity || 0);
+
+                // Controleer toekomstige staat
+                if (power.usage + deltaPower > power.capacity + deltaPowerCap) {
+                    return { canUpgrade: false, reason: 'Te weinig stroom voor upgrade' };
+                }
+                if (water.usage + deltaWater > water.capacity + deltaWaterCap) {
+                    return { canUpgrade: false, reason: 'Te weinig water voor upgrade' };
+                }
+                if (waste.usage + deltaWaste > waste.capacity + deltaWasteCap) {
+                    return { canUpgrade: false, reason: 'Te weinig afvalverwerking' };
+                }
+
+                return { canUpgrade: true, reason: '' };
+            },
+
+            toggleSloopMode: () => {
+                GameState.isSloopMode = !GameState.isSloopMode;
+                if (GameState.isSloopMode) {
+                    DOM.sloopToggleButton.classList.add('active');
+                    DOM.boardContainer.classList.add('sloop-modus-actief');
+                    UIManager.showMessage('Sloop Modus Actief. Klik op een gebouw om het te slopen.', 'info');
+                    GameState.selectedBuilding = null;
+                    UIManager.updateBuildMenuHighlights();
+                } else {
+                    DOM.sloopToggleButton.classList.remove('active');
+                    DOM.boardContainer.classList.remove('sloop-modus-actief');
+                    UIManager.showMessage('Sloop Modus Gedeactiveerd.', 'info');
+                }
+            },
+
+            handleRandomEventLogic: () => {
+                if (GameState.activeEvent) return;
+                if (Math.random() < GameSettings.RANDOM_EVENT_CHANCE) {
+                    const event = RandomEvents[Math.floor(Math.random() * RandomEvents.length)];
+                    GameState.activeEvent = { ...event };
+                    UIManager.showMessage(`WILLEKEURIG EVENEMENT: ${event.title}! ${event.message}`, 'event');
+                    GameState.sfx.event?.triggerAttackRelease('G5', '2n');
+                    if (event.effect.type === 'happiness_boost') GameState.happiness = Math.min(100, GameState.happiness + event.effect.value);
+                    if (event.effect.type === 'flat_cost') GameState.saldo -= event.effect.value;
+                    if (event.effect.type === 'flat_income') GameState.saldo += event.effect.value;
+                    GameLogic.saveGame();
+                }
+            },
+
+            updateActiveEvent: () => {
+                if (GameState.activeEvent) {
+                    GameState.activeEvent.durationTicks--;
+                    if (GameState.activeEvent.durationTicks <= 0) {
+                        UIManager.showMessage(`EVENEMENT BEËINDIGD: ${GameState.activeEvent.title} is voorbij.`, 'info');
+                        GameState.activeEvent = null;
+                        GameLogic.saveGame();
+                    }
+                }
+            },
+
+            // --- SAVE / LOAD / RESET FUNCTIES (Geüpdatet) ---
+
+            saveGame: () => {
+                try {
+                    const saveData = {
+                        saldo: GameState.saldo,
+                        happiness: GameState.happiness,
+                        placedSlots: GameState.placedSlots,
+                        activeEvent: GameState.activeEvent,
+                        currentDayTime: GameState.currentDayTime,
+                        dayNightTickCounter: GameState.dayNightTickCounter,
+                        activeEmergencies: GameState.activeEmergencies, // NIEUW: Sla noodgevallen op
+                    };
+                    localStorage.setItem(GameSettings.SAVE_KEY, JSON.stringify(saveData));
+                    // console.log("Spel opgeslagen!"); // Te veel spam
+                } catch (e) {
+                    console.error("Opslaan mislukt:", e);
+                    UIManager.showMessage("Kon het spel niet opslaan.", "error");
+                }
+            },
+
+            loadGame: () => {
+                try {
+                    const saveDataString = localStorage.getItem(GameSettings.SAVE_KEY);
+                    if (saveDataString) {
+                        const saveData = JSON.parse(saveDataString);
+
+                        // Valideer en laad data
+                        GameState.saldo = saveData.saldo || 25000;
+                        GameState.happiness = saveData.happiness || 50;
+                        GameState.placedSlots = saveData.placedSlots || {};
+                        GameState.activeEvent = saveData.activeEvent || null;
+                        GameState.currentDayTime = saveData.currentDayTime || 'day';
+                        GameState.dayNightTickCounter = saveData.dayNightTickCounter || 0;
+                        GameState.activeEmergencies = saveData.activeEmergencies || []; // NIEUW: Laad noodgevallen
+
+                        // Verwijder noodgevallen voor niet-bestaande slots
+                        GameState.activeEmergencies = GameState.activeEmergencies.filter(e => GameState.placedSlots[e.slotId]);
+
+                        console.log("Spel geladen!");
+                        UIManager.showMessage("Opgeslagen spel geladen. Welkom terug!", "info");
+                    } else {
+                        console.log("Geen opgeslagen spel gevonden. Nieuw spel wordt gestart.");
+                    }
+                } catch (e) {
+                    console.error("Laden mislukt:", e);
+                    UIManager.showMessage("Kon opgeslagen spel niet laden. Start nieuw spel.", "error");
+                    localStorage.removeItem(GameSettings.SAVE_KEY);
+                }
+            },
+
+            confirmReset: () => {
+                UIManager.openModal('confirmReset');
+            },
+
+            resetGame: () => {
+                try {
+                    localStorage.removeItem(GameSettings.SAVE_KEY);
+                    UIManager.showMessage("Spel gereset. Pagina wordt herladen...", "info");
+                    setTimeout(() => { window.location.reload(); }, 2000);
+                } catch (e) { console.error("Reset mislukt:", e); }
+            }
+        };
+
+        /**
+         * =================================================================
+         * Sectie 6: NIEUW - Emergency Manager
+         * Beheert noodgevallen, dispatching en oplossing.
+         * =================================================================
+         */
+        const EmergencyManager = {
+
+            // Kaart van noodgeval-type naar gebouw-type (serviceType)
+            serviceMap: {
+                'fire': 'fire',
+                'crime': 'police',
+                'medical': 'hospital',
+            },
+
+            // Kaart voor voertuig-emoji's
+            emojiMap: {
+                'fire': '🚒',
+                'crime': '🚓',
+                'medical': '🚑',
+            },
+
+            /**
+             * Controleert willekeurig of een noodgeval moet starten.
+             */
+            checkAndTriggerEmergency: () => {
+                // Slechts één noodgeval tegelijk (voor eenvoud)
+                if (GameState.activeEmergencies.length > 0) return;
+
+                // Kans om een noodgeval te starten
+                if (Math.random() < GameSettings.EMERGENCY_CHANCE_PER_TICK) {
+
+                    // Vind geschikte gebouwen (bv. woningen)
+                    const potentialTargets = Object.keys(GameState.placedSlots).filter(slotId => {
+                        const type = GameState.placedSlots[slotId];
+                        return BuildingTypes[type]?.category === 'woning';
+                    });
+
+                    if (potentialTargets.length === 0) return; // Geen doelen
+
+                    const targetSlotId = potentialTargets[Math.floor(Math.random() * potentialTargets.length)];
+                    const emergencyType = ['fire', 'crime', 'medical'][Math.floor(Math.random() * 3)];
+
+                    EmergencyManager.startEmergency(targetSlotId, emergencyType);
+                }
+            },
+
+            /**
+             * Start een noodgeval op een specifieke slot.
+             */
+            startEmergency: (slotId, type) => {
+                if (GameState.activeEmergencies.some(e => e.slotId === slotId)) return; // Al een noodgeval daar
+
+                const serviceBuildingType = Object.values(BuildingTypes).find(b => b.serviceType === type);
+                if (!serviceBuildingType) {
+                    console.error(`Geen gebouw gevonden voor serviceType ${type}`);
+                    return;
+                }
+
+                const stationSlotId = EmergencyManager.findStation(serviceBuildingType.serviceType);
+
+                let isDispatched = false;
+                if (stationSlotId) {
+                    isDispatched = true;
+                    UIManager.animateVehicle(stationSlotId, slotId, type);
+                    UIManager.showMessage(`🚨 NOODGEVAL (${type})! Hulp is onderweg naar ${BuildingTypes[GameState.placedSlots[slotId]].name}.`, 'emergency');
+                } else {
+                    UIManager.showMessage(`🚨 NOODGEVAL (${type})! Bouw een ${serviceBuildingType.name} om te helpen!`, 'emergency');
+                }
+
+                GameState.activeEmergencies.push({
+                    slotId: slotId,
+                    type: type,
+                    durationTicks: GameSettings.EMERGENCY_DURATION_TICKS,
+                    isDispatched: isDispatched
+                });
+
+                UIManager.renderBoard();
+                GameLogic.saveGame();
+            },
+
+            /**
+             * Update de timers van actieve noodgevallen.
+             */
+            updateEmergencies: () => {
+                // Maak een kopie om veilig te itereren terwijl we misschien verwijderen
+                const emergenciesToUpdate = [...GameState.activeEmergencies];
+
+                emergenciesToUpdate.forEach(emergency => {
+                    emergency.durationTicks--;
+
+                    if (emergency.durationTicks <= 0) {
+                        if (emergency.isDispatched) {
+                            // Tijd is op, maar hulp was onderweg (dit zou opgelost moeten worden door animateVehicle.onfinish)
+                            // Dit is een fallback voor het geval de animatie faalt
+                            EmergencyManager.resolveEmergency(emergency.slotId, emergency.type, true);
+                        } else {
+                            // Tijd is op en geen hulp gestuurd
+                            UIManager.showMessage(`Te laat! ${BuildingTypes[GameState.placedSlots[emergency.slotId]].name} is verwoest door ${emergency.type}!`, 'error');
+                            GameLogic.sloopBuilding(emergency.slotId, true); // true = verwoest
+                        }
+                    }
+                });
+            },
+
+            /**
+             * Vind de *eerste* beschikbare station van een bepaald type.
+             * @param {string} serviceType - 'fire', 'police', of 'hospital'
+             * @returns {string|null} - De slotId van het station, of null.
+             */
+            findStation: (serviceType) => {
+                const found = Object.entries(GameState.placedSlots).find(([slotId, buildingKey]) => {
+                    return BuildingTypes[buildingKey]?.serviceType === serviceType;
+                });
+                return found ? found[0] : null; // Retourneer alleen de slotId
+            },
+
+            /**
+             * Lost een noodgeval op (wanneer voertuig aankomt of gebouw wordt verwoest).
+             */
+            resolveEmergency: (slotId, type, isSilent = false) => {
+                const index = GameState.activeEmergencies.findIndex(e => e.slotId === slotId);
+                if (index > -1) {
+                    GameState.activeEmergencies.splice(index, 1);
+
+                    if (!isSilent && type) {
+                        UIManager.showMessage(`✅ Noodgeval (${type}) opgelost!`, 'info');
+                    }
+
+                    UIManager.renderBoard(); // Update de UI om marker te verwijderen
+                    GameLogic.saveGame();
+                }
+            }
+        };
+
+
+        /**
+         * =================================================================
+         * Sectie 7: Initialisatie
+         * =================================================================
+         */
+
+        function initGame() {
+            // 1. Laad opgeslagen data (vooral placedSlots)
+            GameLogic.loadGame();
+
+            // 2. Bereken de resource-state op basis van geladen slots
+            GameLogic.updateStatsFromScratch();
+
+            // 3. Render de UI met de geladen en berekende data
+            UIManager.renderBoard();
+            UIManager.renderBuildMenu(); // Render tabs en knoppen
+            UIManager.updateMoney();
+            UIManager.updateHappiness();
+            UIManager.updateDayNightCycle();
+            UIManager.updateResourceStats(); // Toon de berekende resources
+
+            // 4. Initialiseer kaart-interacties
+            UIManager.initMapDrag();
+
+            // 5. Toon startscherm (wacht op gebruikersinteractie)
+            UIManager.initStartScherm();
+
+            // 6. Globale listeners
+            window.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    UIManager.forceCloseModal();
+                }
+            });
+
+            console.log("Builder’s Village is geïnitialiseerd.");
+            console.log("Geladen GameState:", GameState);
+        }
+
+        // Start het spel
+        window.onload = initGame;
+
+        // Maak functies globaal beschikbaar voor HTML onclick events
+        window.UIManager = UIManager;
+        window.GameLogic = GameLogic;
+        window.EmergencyManager = EmergencyManager; // Maak ook beschikbaar (voor debuggen)
+
+    </script>
+</body>
+
+</html>
