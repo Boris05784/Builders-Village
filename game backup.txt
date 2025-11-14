@@ -1,7 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="nl">
 
 <head>
+    <link rel="icon"
+        href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='100%25' height='100%25' fill='transparent'/%3E%3Ctext x='50%25' y='50%25' font-size='46' text-anchor='middle' dominant-baseline='central'%3E%F0%9F%8F%97%EF%B8%8F%3C/text%3E%3C/svg%3E">
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- TITEL GEWIJZIGD -->
@@ -520,16 +523,74 @@
 
     <!-- START SCHERM (Over het hele spel) -->
     <div id="start-scherm">
-        <div class="p-8">
+        <div class="p-8 text-center">
             <h1 class="text-6xl font-extrabold mb-4">🏗️ Builder’s Village</h1>
-            <p class="text-xl mb-8">Welkom, Burgemeester! Bouw je stad, beheer je bronnen en houd je burgers tevreden.
+
+            <p class="text-xl mb-6">
+                Welkom, Burgemeester! 🌆
+                Bouw je dorp, beheer je bronnen en houd je inwoners tevreden.
             </p>
+
             <button id="start-knop"
                 class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-8 rounded-xl shadow-lg text-2xl transition-all duration-200 transform hover:scale-105">
                 Start Spel
             </button>
+
+            <p class="text-sm mt-4 text-gray-500">
+                ✨ Builders Village · Boris de Bruin
+            </p>
+
+            <p class="text-sm mt-4 text-gray-500">
+                Aanbevolen: speel Builders Village op een <span class="font-semibold">laptop</span>
+                voor de volledige ervaring. Mobiel werkt ook, maar minder uitgebreid.
+            </p>
         </div>
     </div>
+
+    <!-- Desktop-only waarschuwing voor mobiele apparaten -->
+    <div id="mobile-warning"
+        class="fixed inset-0 bg-black bg-opacity-80 z-300 flex items-center justify-center p-6 hidden">
+        <div class="bg-white rounded-xl p-6 max-w-sm w-full text-center">
+            <h2 class="text-2xl font-bold mb-2">Beste gebruiker</h2>
+            <p class="mb-4">Dit spel is alleen ontworpen voor desktop/laptop. Gebruik svp een computer voor de beste
+                ervaring.</p>
+            <button id="mobile-dismiss" class="mt-2 bg-indigo-600 text-white py-2 px-4 rounded-lg">Sluiten (alleen
+                lezen)</button>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const el = document.getElementById('mobile-warning');
+            const dismiss = document.getElementById('mobile-dismiss');
+
+            // 1) Detectie: combineer schermgrootte en userAgent voor betrouwbare detectie
+            const isNarrow = Math.max(window.screen.width, window.screen.height) < 900; // mobiel/klein tablet
+            const ua = navigator.userAgent || navigator.vendor || window.opera;
+            const isMobileUA = /Android|iPhone|iPad|iPod|Windows Phone|Mobi/i.test(ua);
+
+            // 2) Toon alleen als we mobiel vermoeden (niet tonen op laptops/desktops)
+            if (isNarrow && isMobileUA) {
+                el.classList.remove('hidden');
+            }
+
+            // 3) Optioneel: allow user to dismiss for a short time (local session)
+            dismiss.addEventListener('click', () => {
+                el.classList.add('hidden');
+                // Optioneel: onthoud dat gebruiker toestemming gaf voor deze sessie
+                sessionStorage.setItem('mobileWarningDismissed', '1');
+            });
+
+            // Respect dismiss als gebruiker dat eerder deed deze sessie
+            if (sessionStorage.getItem('mobileWarningDismissed') === '1') {
+                el.classList.add('hidden');
+            }
+
+            // 4) Extra: je kunt ook het hele spel uitschakelen op mobiel door dit event te gebruiken
+            // if (!el.classList.contains('hidden')) { /* disable game start buttons, inputs, etc. */ }
+        })();
+    </script>
+
 
     <!-- DAG/NACHT OVERLAY -->
     <div id="night-overlay"></div>
@@ -772,6 +833,34 @@
                 powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
                 serviceType: null,
             },
+            'tiny_house_1': {
+                name: 'Tiny House',
+                description: 'Compact en goedkoop wonen.',
+                cost: 800,
+                emoji: '🏚️',
+                category: 'woning',
+                happinessEffect: 1,
+                income: 20,
+                population: 2,
+                upgradeTo: null,
+                powerUsage: 0, waterUsage: 0, wasteProduction: 0,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'eco_apartment_1': {
+                name: 'Eco Appartement',
+                description: 'Duurzaam wonen met lage verbruikskosten.',
+                cost: 9000,
+                emoji: '🌱',
+                category: 'woning',
+                happinessEffect: 6,
+                income: 450,
+                population: 30,
+                upgradeTo: null,
+                powerUsage: 4, waterUsage: 4, wasteProduction: 3,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
 
             // --- Categorie: COMMERCIEEL ---
             'cafe_1': {
@@ -858,47 +947,31 @@
                 powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
                 serviceType: null,
             },
-
-            // --- NIEUWE COMMERCIELE GEBOUWEN ---
-            'bank_1': {
-                name: 'Bank',
-                description: 'Financiële diensten. Stabiel, hoog inkomen.',
-                cost: 12000,
-                emoji: '🏦',
+            'food_truck_1': {
+                name: 'Foodtruck',
+                description: 'Goedkope horeca; trekt locals aan.',
+                cost: 800,
+                emoji: '🍔',
                 category: 'commercieel',
                 happinessEffect: 1,
-                income: 3500,
+                income: 300,
                 population: 0,
                 upgradeTo: null,
-                powerUsage: 6, waterUsage: 2, wasteProduction: 2,
+                powerUsage: 1, waterUsage: 1, wasteProduction: 1,
                 powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
                 serviceType: null,
             },
-            'hotel_1': {
-                name: 'Hotel (Lvl 1)',
-                description: 'Trekt toeristen aan en zorgt voor inkomsten.',
-                cost: 7000,
-                emoji: '🏨',
+            'outdoor_market_1': {
+                name: 'Markt',
+                description: 'Lokale markt: inkomen en buurt-levendigheid.',
+                cost: 3500,
+                emoji: '🛒',
                 category: 'commercieel',
                 happinessEffect: 3,
-                income: 2000,
-                population: 0,
-                upgradeTo: 'hotel_2',
-                powerUsage: 10, waterUsage: 12, wasteProduction: 8,
-                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
-                serviceType: null,
-            },
-            'hotel_2': {
-                name: 'Luxe Resort (Lvl 2)',
-                description: 'Een vijfsterrenervaring. Trekt rijke toeristen.',
-                cost: 20000, // Upgrade kosten
-                emoji: '✨',
-                category: 'commercieel',
-                happinessEffect: 8,
-                income: 7000,
+                income: 900,
                 population: 0,
                 upgradeTo: null,
-                powerUsage: 30, waterUsage: 40, wasteProduction: 25,
+                powerUsage: 2, waterUsage: 2, wasteProduction: 2,
                 powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
                 serviceType: null,
             },
@@ -932,40 +1005,36 @@
                 powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
                 serviceType: null,
             },
-
-            // --- NIEUWE INDUSTRIE ---
-            'logistics_1': {
-                name: 'Logistiek Centrum',
-                description: 'Distributie van goederen. Minder vervuilend dan een fabriek.',
-                cost: 6000,
-                emoji: '🚚',
+            'green_factory_1': {
+                name: 'Groene Fabriek',
+                description: 'Minder vervuilende productie; redelijk inkomen.',
+                cost: 8000,
+                emoji: '🏭🌿',
                 category: 'industrie',
                 happinessEffect: -4,
-                income: 2200,
+                income: 2600,
                 population: 0,
                 upgradeTo: null,
-                powerUsage: 10, waterUsage: 3, wasteProduction: 5,
+                powerUsage: 18, waterUsage: 8, wasteProduction: 6,
                 powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
                 serviceType: null,
             },
-            'farm_1': {
-                name: 'Stadsboerderij',
-                description: 'Lokale voedselproductie. Licht positief geluk.',
-                cost: 2500,
-                emoji: '🚜',
+            'artisan_workshop_1': {
+                name: 'Ambachtelijke Werkplaats',
+                description: 'Kleine industrie met lokaal karakter.',
+                cost: 2200,
+                emoji: '🔧',
                 category: 'industrie',
-                happinessEffect: 1, // Mensen vinden lokaal voedsel fijn
-                income: 400,
+                happinessEffect: -2,
+                income: 700,
                 population: 0,
                 upgradeTo: null,
-                powerUsage: 1,
-                waterUsage: 8, // Heeft veel water nodig
-                wasteProduction: 3,
+                powerUsage: 6, waterUsage: 2, wasteProduction: 2,
                 powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
                 serviceType: null,
             },
 
-            // --- Categorie: VERMAAK & CULTUUR ---
+            // --- Vermaak / Cultuur ---
             'cinema': {
                 name: 'Bioscoop',
                 description: 'Entertainment voor de burgers.',
@@ -1026,21 +1095,31 @@
                 powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
                 serviceType: null,
             },
-
-            // --- NIEUW VERMAAK ---
-            'stadium_1': {
-                name: 'Stadion',
-                description: 'Sport en concerten. Grote boost voor geluk, maar duur.',
-                cost: 30000,
-                emoji: '🏟️',
+            'arcade_1': {
+                name: 'Arcade',
+                description: 'Plezier voor de jeugd, verhoogt geluk licht.',
+                cost: 2000,
+                emoji: '🕹️',
                 category: 'vermaak',
-                happinessEffect: 20,
-                income: 2500, // Ticketverkoop
+                happinessEffect: 4,
+                income: 500,
                 population: 0,
                 upgradeTo: null,
-                powerUsage: 50, // Verlichting, etc.
-                waterUsage: 30,
-                wasteProduction: 40, // Veel afval na een evenement
+                powerUsage: 6, waterUsage: 1, wasteProduction: 2,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'playground_1': {
+                name: 'Speeltuin',
+                description: 'Gratis vermaak voor gezinnen; laag verbruik.',
+                cost: 1000,
+                emoji: '🛝',
+                category: 'vermaak',
+                happinessEffect: 5,
+                income: 0,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 0, waterUsage: 1, wasteProduction: 1,
                 powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
                 serviceType: null,
             },
@@ -1074,8 +1153,6 @@
                 powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
                 serviceType: null,
             },
-
-            // --- NIEUWE PUBLIEKE DIENSTEN (met serviceType) ---
             'hospital_1': {
                 name: 'Ziekenhuis',
                 description: 'Houdt uw burgers gezond. Essentieel voor een grote stad.',
@@ -1244,8 +1321,6 @@
                 wasteCapacity: 500,
                 serviceType: null,
             },
-
-            // --- NIEUWE VOORZIENINGEN ---
             'solar_plant_1': {
                 name: 'Zonnepark',
                 description: 'Levert 50 Stroom. Schoon, maar duur in aanschaf.',
@@ -1392,7 +1467,7 @@
             },
 
         };
-        
+
         const LoanSettings = {
             MIN_LOAN: 10000,
             MAX_LOAN: 100000,
@@ -3246,3 +3321,4 @@
 </body>
 
 </html>
+
