@@ -437,6 +437,13 @@
             font-size: 2rem;
             z-index: 15;
             /* Boven wegen, onder slots */
+            display: inline-block;
+            /* zorg dat scaleX/scaleY auto's goed flipt */
+            transform-origin: center center;
+            /* flip rond midden van de emoji */
+            will-change: transform;
+            backface-visibility: hidden;
+            transform-style: preserve-3d;
         }
 
         /* --- NIEUW: Hulpvoertuigen --- */
@@ -449,15 +456,17 @@
             text-shadow: 0 0 5px white;
             transition: transform 0.2s;
             /* Voor 'wiebelen' */
+            backface-visibility: hidden;
+            transform-style: preserve-3d;
         }
 
         @keyframes drive-horizontal-ltr {
             from {
-                transform: translateX(-100px);
+                transform: translateX(-100px) rotateY(0deg);
             }
 
             to {
-                transform: translateX(2550px);
+                transform: translateX(2550px) rotateY(0deg);
             }
 
             /* 2500px map + 50px */
@@ -465,21 +474,21 @@
 
         @keyframes drive-horizontal-rtl {
             from {
-                transform: translateX(2550px) scaleX(-1);
+                transform: translateX(2550px) rotateY(180deg);
             }
 
             to {
-                transform: translateX(-100px) scaleX(-1);
+                transform: translateX(-100px) rotateY(180deg);
             }
         }
 
         @keyframes drive-vertical-ttb {
             from {
-                transform: translateY(-100px);
+                transform: translateY(-100px) translateZ(0);
             }
 
             to {
-                transform: translateY(2050px);
+                transform: translateY(2050px) translateZ(0);
             }
 
             /* 2000px map + 50px */
@@ -487,11 +496,11 @@
 
         @keyframes drive-vertical-btt {
             from {
-                transform: translateY(2050px) scaleY(-1);
+                transform: translateY(2050px) translateZ(0);
             }
 
             to {
-                transform: translateY(-100px) scaleY(-1);
+                transform: translateY(-100px) translateZ(0);
             }
         }
 
@@ -514,6 +523,55 @@
         .car-4 {
             left: 1810px;
             animation: drive-vertical-btt 20s linear infinite;
+        }
+
+        /* --- NIEUW: Hulpvoertuigen Animaties --- */
+        .emergency-vehicle {
+            position: absolute;
+            font-size: 2.5rem;
+            z-index: 30;
+            text-shadow: 0 0 5px white;
+            transition: transform 0.2s;
+        }
+
+        @keyframes drive-horizontal-ltr {
+            from {
+                transform: translateX(-100px) rotateY(0deg);
+            }
+
+            to {
+                transform: translateX(2550px) rotateY(0deg);
+            }
+        }
+
+        @keyframes drive-horizontal-rtl {
+            from {
+                transform: translateX(2550px) rotateY(180deg);
+            }
+
+            to {
+                transform: translateX(-100px) rotateY(180deg);
+            }
+        }
+
+        @keyframes drive-vertical-ttb {
+            from {
+                transform: translateY(-100px) translateZ(0);
+            }
+
+            to {
+                transform: translateY(2050px) translateZ(0);
+            }
+        }
+
+        @keyframes drive-vertical-btt {
+            from {
+                transform: translateY(2050px) translateZ(0);
+            }
+
+            to {
+                transform: translateY(-100px) translateZ(0);
+            }
         }
     </style>
 </head>
@@ -1465,8 +1523,8 @@
                 serviceType: null,
             },
 
-        
-                'concert_hall': {
+
+            'concert_hall': {
                 name: 'Concertzaal',
                 description: 'Live muziek en entertainment.',
                 cost: 20000,
@@ -1679,7 +1737,9 @@
                 population: 0,
                 upgradeTo: null,
                 powerUsage: 20, waterUsage: 5, wasteProduction: 15,
-                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                powerCapacity: 0,
+                waterCapacity: 0,
+                wasteCapacity: 0,
                 serviceType: null,
             },
             'virtual_reality_1': {
@@ -1693,6 +1753,357 @@
                 population: 0,
                 upgradeTo: null,
                 powerUsage: 45, waterUsage: 2, wasteProduction: 5,
+                powerCapacity: 0,
+                waterCapacity: 0,
+                wasteCapacity: 0,
+                serviceType: null,
+            },
+            // --- WONINGEN (extra) ---
+            'row_house_1': {
+                name: 'Rijhuis (Lvl 1)',
+                description: 'Betaalbare rijwoning, lage kosten.',
+                cost: 1200,
+                emoji: '🏡',
+                category: 'woning',
+                happinessEffect: 1,
+                income: 40,
+                population: 3,
+                upgradeTo: 'row_house_2',
+                powerUsage: 1, waterUsage: 1, wasteProduction: 1,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'row_house_2': {
+                name: 'Rijhuis (Lvl 2)',
+                description: 'Modern rijhuis, betere voorzieningen.',
+                cost: 3500,
+                emoji: '🏠',
+                category: 'woning',
+                happinessEffect: 3,
+                income: 150,
+                population: 8,
+                upgradeTo: 'row_house_3',
+                powerUsage: 3, waterUsage: 3, wasteProduction: 3,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'row_house_3': {
+                name: 'Stadsrijhuis (Lvl 3)',
+                description: 'Volledig gerenoveerde rijhuizen.',
+                cost: 12000,
+                emoji: '🏘️',
+                category: 'woning',
+                happinessEffect: 6,
+                income: 500,
+                population: 25,
+                upgradeTo: null,
+                powerUsage: 8, waterUsage: 10, wasteProduction: 9,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+            // --- COMMERCIEEL (extra) ---
+            'bakery_1': {
+                name: 'Bakkerij',
+                description: 'Lokale bakker; verhoogt buurtgeluk.',
+                cost: 900,
+                emoji: '🥐',
+                category: 'commercieel',
+                happinessEffect: 1,
+                income: 300,
+                population: 0,
+                upgradeTo: 'bakery_2',
+                powerUsage: 2, waterUsage: 1, wasteProduction: 1,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'bakery_2': {
+                name: 'Ambachtelijke Bakkerij',
+                description: 'Populaire bakkerij met catering.',
+                cost: 3200,
+                emoji: '🥖',
+                category: 'commercieel',
+                happinessEffect: 3,
+                income: 900,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 6, waterUsage: 3, wasteProduction: 3,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'startup_hub_1': {
+                name: 'Startup Hub',
+                description: 'Kleine flexworkspaces, stimuleert innovatie.',
+                cost: 5500,
+                emoji: '🚀',
+                category: 'commercieel',
+                happinessEffect: 2,
+                income: 1200,
+                population: 0,
+                upgradeTo: 'startup_hub_2',
+                powerUsage: 10, waterUsage: 3, wasteProduction: 2,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'startup_hub_2': {
+                name: 'Innovatie Campus',
+                description: 'Grote campus met hoge productiviteit.',
+                cost: 20000,
+                emoji: '🏢🚀',
+                category: 'commercieel',
+                happinessEffect: 5,
+                income: 4200,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 30, waterUsage: 8, wasteProduction: 6,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+            // --- INDUSTRIE (extra) ---
+            'light_industry_1': {
+                name: 'Lichte Industrie',
+                description: 'Kleine productiefaciliteit; minder vervuilend.',
+                cost: 3000,
+                emoji: '🏗️',
+                category: 'industrie',
+                happinessEffect: -3,
+                income: 1200,
+                population: 0,
+                upgradeTo: 'light_industry_2',
+                powerUsage: 12, waterUsage: 6, wasteProduction: 6,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'light_industry_2': {
+                name: 'Geavanceerde Werkplaats',
+                description: 'Efficiëntere machines, hogere winst.',
+                cost: 10000,
+                emoji: '🏭⚙️',
+                category: 'industrie',
+                happinessEffect: -7,
+                income: 3800,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 35, waterUsage: 18, wasteProduction: 15,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'artisan_park_1': {
+                name: 'Ambachtspark',
+                description: 'Kleine ateliers; milder op geluk.',
+                cost: 1800,
+                emoji: '🔨',
+                category: 'industrie',
+                happinessEffect: -1,
+                income: 500,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 5, waterUsage: 2, wasteProduction: 2,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+            // --- VERMAAK (extra) ---
+            'arcade_1': {
+                name: 'Arcade',
+                description: 'Plezier voor de jeugd, verhoogt geluk licht.',
+                cost: 2000,
+                emoji: '🕹️',
+                category: 'vermaak',
+                happinessEffect: 4,
+                income: 500,
+                population: 0,
+                upgradeTo: 'arcade_2',
+                powerUsage: 6, waterUsage: 1, wasteProduction: 2,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'arcade_2': {
+                name: 'Arcade (Retro Hall)',
+                description: 'Grotere arcade met toernooien en merchandise.',
+                cost: 7000,
+                emoji: '🕹️✨',
+                category: 'vermaak',
+                happinessEffect: 7,
+                income: 1400,
+                population: 0,
+                upgradeTo: 'arcade_3',
+                powerUsage: 12, waterUsage: 2, wasteProduction: 4,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'arcade_3': {
+                name: 'Arcade (Entertainment Complex)',
+                description: 'Volledig complex met VR-rooms en events.',
+                cost: 22000,
+                emoji: '🕹️🎪',
+                category: 'vermaak',
+                happinessEffect: 12,
+                income: 4200,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 30, waterUsage: 5, wasteProduction: 8,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'open_air_stage_1': {
+                name: 'Openluchtpodium',
+                description: 'Kleine podia en lokale optredens.',
+                cost: 2800,
+                emoji: '🎤',
+                category: 'vermaak',
+                happinessEffect: 5,
+                income: 700,
+                population: 0,
+                upgradeTo: 'open_air_stage_2',
+                powerUsage: 5, waterUsage: 2, wasteProduction: 2,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'open_air_stage_2': {
+                name: 'Festivalpodium',
+                description: 'Trekt grote menigten; veel toerisme.',
+                cost: 14000,
+                emoji: '🎪',
+                category: 'vermaak',
+                happinessEffect: 14,
+                income: 3200,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 28, waterUsage: 8, wasteProduction: 12,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+            // --- PUBLIEK (extra) ---
+            'downtown_school_1': {
+                name: 'Basisschool',
+                description: 'Klassieke openbare school; helpt opleiding.',
+                cost: 2200,
+                emoji: '🏫',
+                category: 'publiek',
+                happinessEffect: 2,
+                income: 150,
+                population: 0,
+                upgradeTo: 'downtown_school_2',
+                powerUsage: 4, waterUsage: 4, wasteProduction: 3,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'downtown_school_2': {
+                name: 'Hogeschool',
+                description: 'Onderwijscentrum; verhoogt talent en geluk.',
+                cost: 12000,
+                emoji: '🎓',
+                category: 'publiek',
+                happinessEffect: 6,
+                income: 800,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 20, waterUsage: 12, wasteProduction: 8,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'community_center_1': {
+                name: 'Buurtcentrum',
+                description: 'Gratis activiteiten voor bewoners.',
+                cost: 3000,
+                emoji: '🏛️',
+                category: 'publiek',
+                happinessEffect: 4,
+                income: 50,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 6, waterUsage: 3, wasteProduction: 2,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+            // --- VOORZIENINGEN (extra) ---
+            'small_solar_1': {
+                name: 'Dakpaneleiland',
+                description: 'Kleine zonne-installatie; schoon maar beperkt.',
+                cost: 6000,
+                emoji: '🔆',
+                category: 'voorziening',
+                happinessEffect: 1,
+                income: 0,
+                population: 0,
+                upgradeTo: 'small_solar_2',
+                powerUsage: 0, waterUsage: 0, wasteProduction: 0,
+                powerCapacity: 25, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'small_solar_2': {
+                name: 'Zonnedakpark',
+                description: 'Groot zonnepark; levert fatsoenlijke stroom.',
+                cost: 20000,
+                emoji: '🌞',
+                category: 'voorziening',
+                happinessEffect: 3,
+                income: 0,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 0, waterUsage: 0, wasteProduction: 0,
+                powerCapacity: 120, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'water_pump_1': {
+                name: 'Pompstation',
+                description: 'Kleine pomp, vergroot watercapaciteit.',
+                cost: 4200,
+                emoji: '🔧💧',
+                category: 'voorziening',
+                happinessEffect: 0,
+                income: 0,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 6, waterUsage: 0, wasteProduction: 1,
+                powerCapacity: 0, waterCapacity: 120, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+            // --- ENTERTAINMENT (extra) ---
+            'mini_golf_1': {
+                name: 'Minigolfbaan',
+                description: 'Gezinsvriendelijke attractie, lage verbruikskosten.',
+                cost: 2400,
+                emoji: '⛳',
+                category: 'entertainment',
+                happinessEffect: 5,
+                income: 400,
+                population: 0,
+                upgradeTo: 'mini_golf_2',
+                powerUsage: 2, waterUsage: 4, wasteProduction: 2,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'mini_golf_2': {
+                name: 'Resort Minigolf',
+                description: 'Themagebied met horeca en shows.',
+                cost: 12000,
+                emoji: '🏖️⛳',
+                category: 'entertainment',
+                happinessEffect: 12,
+                income: 2200,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 18, waterUsage: 20, wasteProduction: 10,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'escape_room_1': {
+                name: 'Escape Room',
+                description: 'Populaire indoor ervaring; hoge winst per m2.',
+                cost: 3200,
+                emoji: '🔒',
+                category: 'entertainment',
+                happinessEffect: 6,
+                income: 1100,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 8, waterUsage: 1, wasteProduction: 1,
                 powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
                 serviceType: null,
             },
@@ -1791,12 +2202,6 @@
             { id: 'slot-49', top: '350px', left: '2200px' },
             { id: 'slot-50', top: '350px', left: '2300px' },
             { id: 'slot-51', top: '350px', left: '2400px' },
-            { id: 'slot-52', top: '400px', left: '1900px' },
-            { id: 'slot-53', top: '400px', left: '2000px' },
-            { id: 'slot-54', top: '400px', left: '2100px' },
-            { id: 'slot-55', top: '400px', left: '2200px' },
-            { id: 'slot-56', top: '400px', left: '2300px' },
-            { id: 'slot-57', top: '400px', left: '2400px' },
             // --- BLOK 1 (X: 100-500, Y: 600) ---
             { id: 'slot-58', top: '600px', left: '100px' },
             { id: 'slot-59', top: '600px', left: '200px' },
@@ -2886,7 +3291,7 @@
                 }
 
                 // 4. Inkomen toevoegen (alleen als resources OK zijn)
-                const earned = stats.netEarned; // netEarned is al 0 als resources niet OK zijn
+                const earned = stats.netEarned; // netEarned is al 0 als resources niet OK zijn, of als geluk 0 is
                 GameState.saldo += earned;
 
                 // 5. Melding van de tick
@@ -3553,4 +3958,3 @@
 </body>
 
 </html>
-
