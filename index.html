@@ -701,6 +701,12 @@
                 class="bg-gray-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition-all duration-200">
                 Sloop Modus 🏗️
             </button>
+            <!-- ================== NIEUWE KNOP ================== -->
+            <button onclick="UIManager.openModal('gameMenu')"
+                class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition-all duration-200">
+                Spel Menu ⚙️
+            </button>
+            <!-- ================== EINDE NIEUWE KNOP ================== -->
         </div>
     </div>
 
@@ -1150,20 +1156,6 @@
                 powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
                 serviceType: null,
             },
-            'arcade_1': {
-                name: 'Arcade',
-                description: 'Plezier voor de jeugd, verhoogt geluk licht.',
-                cost: 2000,
-                emoji: '🕹️',
-                category: 'vermaak',
-                happinessEffect: 4,
-                income: 500,
-                population: 0,
-                upgradeTo: null,
-                powerUsage: 6, waterUsage: 1, wasteProduction: 2,
-                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
-                serviceType: null,
-            },
             'playground_1': {
                 name: 'Speeltuin',
                 description: 'Gratis vermaak voor gezinnen; laag verbruik.',
@@ -1521,26 +1513,6 @@
                 serviceType: null,
             },
 
-
-            'concert_hall': {
-                name: 'Concertzaal',
-                description: 'Live muziek en entertainment.',
-                cost: 20000,
-                emoji: '🎵',
-                category: 'entertainment',
-                happinessEffect: 10,
-                income: 2000,
-                population: 0,
-                upgradeTo: null,
-                powerUsage: 25,
-                waterUsage: 10,
-                wasteProduction: 15,
-                powerCapacity: 0,
-                waterCapacity: 0,
-                wasteCapacity: 0,
-                serviceType: null,
-            },
-
             // --- NIEUWE ENTERTAINMENT GEBOUWEN ---
             'arcade_1': {
                 name: 'Arcade',
@@ -1551,7 +1523,7 @@
                 happinessEffect: 4,
                 income: 500,
                 population: 0,
-                upgradeTo: null,
+                upgradeTo: 'arcade_2',
                 powerUsage: 6, waterUsage: 1, wasteProduction: 2,
                 powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
                 serviceType: null,
@@ -1903,26 +1875,12 @@
             },
 
             // --- VERMAAK (extra) ---
-            'arcade_1': {
-                name: 'Arcade',
-                description: 'Plezier voor de jeugd, verhoogt geluk licht.',
-                cost: 2000,
-                emoji: '🕹️',
-                category: 'vermaak',
-                happinessEffect: 4,
-                income: 500,
-                population: 0,
-                upgradeTo: 'arcade_2',
-                powerUsage: 6, waterUsage: 1, wasteProduction: 2,
-                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
-                serviceType: null,
-            },
             'arcade_2': {
                 name: 'Arcade (Retro Hall)',
                 description: 'Grotere arcade met toernooien en merchandise.',
                 cost: 7000,
                 emoji: '🕹️✨',
-                category: 'vermaak',
+                category: 'entertainment',
                 happinessEffect: 7,
                 income: 1400,
                 population: 0,
@@ -1936,7 +1894,7 @@
                 description: 'Volledig complex met VR-rooms en events.',
                 cost: 22000,
                 emoji: '🕹️🎪',
-                category: 'vermaak',
+                category: 'entertainment',
                 happinessEffect: 12,
                 income: 4200,
                 population: 0,
@@ -1950,7 +1908,7 @@
                 description: 'Kleine podia en lokale optredens.',
                 cost: 2800,
                 emoji: '🎤',
-                category: 'vermaak',
+                category: 'entertainment',
                 happinessEffect: 5,
                 income: 700,
                 population: 0,
@@ -1964,7 +1922,7 @@
                 description: 'Trekt grote menigten; veel toerisme.',
                 cost: 14000,
                 emoji: '🎪',
-                category: 'vermaak',
+                category: 'entertainment',
                 happinessEffect: 14,
                 income: 3200,
                 population: 0,
@@ -2427,6 +2385,10 @@
          * (Onveranderd)
          */
         const GameSettings = {
+            // ================== NIEUWE INSTELLINGEN ==================
+            GAME_VERSION: "v1.7.0",
+            LAST_UPDATE: "14-11-2025",
+            // ================== EINDE NIEUWE INSTELLINGEN ==================
             TICK_INTERVAL: 10000, // 10 seconden
             DAY_NIGHT_TICK_DURATION: 6, // 1 minuut per cyclus
             RANDOM_EVENT_CHANCE: 0.15,
@@ -2902,6 +2864,9 @@
                     case 'finance': htmlContent = UIManager.getFinanceMenuHTML(stats); break;
                     case 'population': htmlContent = UIManager.getPopulationMenuHTML(stats); break;
                     case 'upgrade': if (slotId) { htmlContent = UIManager.getUpgradeMenuHTML(slotId, stats); } break;
+                    // ================== NIEUWE CASE ==================
+                    case 'gameMenu': htmlContent = UIManager.getGameMenuHTML(); break;
+                    // ================== EINDE NIEUWE CASE ==================
                     case 'confirmReset': htmlContent = UIManager.getConfirmResetHTML(); break;
                 }
                 DOM.modalContent.innerHTML = htmlContent;
@@ -2960,17 +2925,10 @@
                             <p class="text-xl font-bold text-yellow-700">€${Math.floor(stats.totalBuildingValue).toLocaleString('nl-NL')}</p>
                         </div>
                         
+                        <!-- ================== RESET KNOP VERWIJDERD ================== -->
                         <hr class="my-4">
-                        
-                        <div>
-                             <p class="text-center text-gray-600 mb-2">Spel opslaan/resetten</p>
-                             <button 
-                                onclick="GameLogic.confirmReset()" 
-                                class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all duration-200">
-                                Reset Spel...
-                            </button>
-                            <p class="text-center text-xs text-gray-500 mt-2">Spel wordt automatisch opgeslagen.</p>
-                        </div>
+                        <p class="text-center text-xs text-gray-500 mt-2">Spel wordt automatisch opgeslagen. Ga naar "Spel Menu" voor meer opties.</p>
+                        <!-- ================== EINDE AANPASSING ================== -->
                     </div>
                 `;
             },
@@ -3146,6 +3104,59 @@
                     </div>
                 `;
             },
+
+            // ================== NIEUWE FUNCTIE ==================
+            /**
+             * Genereert de HTML voor het Spel Menu modal.
+             */
+            getGameMenuHTML: () => {
+                return `
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-indigo-800">Spel Menu & Info ⚙️</h2>
+                        <button onclick="UIManager.forceCloseModal()" class="text-gray-500 hover:text-gray-900 text-2xl font-bold">&times;</button>
+                    </div>
+                    
+                    <!-- Spel Info -->
+                    <div class="p-4 bg-gray-50 rounded-lg border mb-6">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">Spel Informatie</h3>
+                        <p class="text-gray-700"><strong>Versie:</strong> ${GameSettings.GAME_VERSION || 'v1.0'}</p>
+                        <p class="text-gray-700"><strong>Laatste Update:</strong> ${GameSettings.LAST_UPDATE || 'Onbekend'}</p>
+                        <p class="text-sm text-gray-500 mt-2">Builder’s Village door Boris de Bruin.</p>
+                    </div>
+
+                    <!-- Import/Export -->
+                    <div class="space-y-4">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">Spel Data Beheren</h3>
+                        <p class="text-sm text-gray-600">Exporteer je spel om een back-up te maken of om op een andere computer verder te spelen.</p>
+                        
+                        <button 
+                            onclick="GameLogic.exportGame()" 
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all duration-200">
+                            Exporteer Opgeslagen Spel
+                        </button>
+                        
+                        <!-- Verborgen file input -->
+                        <input type="file" id="import-file-input" accept=".json,.txt" style="display: none;" onchange="GameLogic.handleFileImport(event)">
+                        
+                        <!-- Label dat eruitziet als een knop -->
+                        <label for="import-file-input" 
+                            class="w-full text-center block bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all duration-200 cursor-pointer">
+                            Importeer Opgeslagen Spel
+                        </label>
+                        
+                        <hr class="my-4 pt-4">
+                        
+                        <!-- Reset Knop (verplaatst) -->
+                        <p class="text-center text-gray-600 mb-2">Reset al je voortgang en begin opnieuw.</p>
+                         <button 
+                            onclick="GameLogic.confirmReset()" 
+                            class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all duration-200">
+                            Reset Spel...
+                        </button>
+                    </div>
+                `;
+            },
+            // ================== EINDE NIEUWE FUNCTIE ==================
 
             /**
              * Get Confirm Reset HTML (Onveranderd, maar forceert sluiten)
@@ -3767,7 +3778,93 @@
                     UIManager.showMessage("Spel gereset. Pagina wordt herladen...", "info");
                     setTimeout(() => { window.location.reload(); }, 2000);
                 } catch (e) { console.error("Reset mislukt:", e); }
+            },
+
+            // ================== NIEUWE FUNCTIES ==================
+            /**
+             * Triggert het downloaden van het opslagbestand.
+             */
+            exportGame: () => {
+                try {
+                    // 1. Zorg dat de laatste data is opgeslagen (voor de zekerheid)
+                    GameLogic.saveGame();
+
+                    // 2. Haal de huidige save data op uit localStorage
+                    const saveDataString = localStorage.getItem(GameSettings.SAVE_KEY);
+                    if (!saveDataString) {
+                        UIManager.showMessage("Geen speldata gevonden om te exporteren.", "error");
+                        return;
+                    }
+
+                    // 3. Maak de download link
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(saveDataString);
+                    const downloadAnchorNode = document.createElement('a');
+                    downloadAnchorNode.setAttribute("href", dataStr);
+
+                    // Genereer een bestandsnaam met datum
+                    const date = new Date();
+                    const dateStr = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+                    downloadAnchorNode.setAttribute("download", `builders_village_save_${dateStr}.json`);
+
+                    // 4. Trigger de download
+                    document.body.appendChild(downloadAnchorNode);
+                    downloadAnchorNode.click();
+                    downloadAnchorNode.remove();
+
+                    UIManager.showMessage("Spel geëxporteerd als JSON-bestand!", "info");
+                    UIManager.forceCloseModal(); // Sluit het menu
+
+                } catch (e) {
+                    console.error("Exporteren mislukt:", e);
+                    UIManager.showMessage("Fout bij het exporteren van het spel.", "error");
+                }
+            },
+
+            /**
+             * Verwerkt het geselecteerde importbestand.
+             * @param {Event} event - Het 'change' event van de file input.
+             */
+            handleFileImport: (event) => {
+                const file = event.target.files[0];
+                if (!file) return; // Geen bestand geselecteerd
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const importedDataString = e.target.result;
+                        const importedData = JSON.parse(importedDataString);
+
+                        // Simpele validatie om te controleren of dit een save file lijkt
+                        if (importedData && importedData.placedSlots && typeof importedData.saldo === 'number' && typeof importedData.happiness === 'number') {
+
+                            // Sla de nieuwe data op in localStorage
+                            localStorage.setItem(GameSettings.SAVE_KEY, importedDataString);
+
+                            UIManager.showMessage("Spel succesvol geïmporteerd! Spel wordt herladen...", "info");
+                            UIManager.forceCloseModal(); // Sluit het menu
+
+                            // Herlaad de pagina om de nieuwe state te laden
+                            // Dit is de veiligste manier om te zorgen dat de hele state klopt
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 2000);
+
+                        } else {
+                            UIManager.showMessage("Geïmporteerd bestand is ongeldig of corrupt.", "error");
+                        }
+                    } catch (err) {
+                        console.error("Importeren mislukt:", err);
+                        UIManager.showMessage("Fout bij het lezen van het importbestand.", "error");
+                    }
+                };
+
+                // Lees het bestand als tekst
+                reader.readAsText(file);
+
+                // Reset de file input zodat dezelfde file opnieuw gekozen kan worden (voor het geval de eerste faalt)
+                event.target.value = null;
             }
+            // ================== EINDE NIEUWE FUNCTIES ==================
         };
 
         /**
@@ -3865,95 +3962,102 @@
                         if (emergency.isDispatched) {
                             // Tijd is op, maar hulp was onderweg (dit zou opgelost moeten worden door animateVehicle.onfinish)
                             // Dit is een fallback voor het geval de animatie faalt
-                            EmergencyManager.resolveEmergency(emergency.slotId, emergency.type, true);
+                            EmergencyManager.resolveEmergency(emergency.slotId, emergency.type);
                         } else {
-                            // Tijd is op en geen hulp gestuurd
-                            UIManager.showMessage(`Te laat! ${BuildingTypes[GameState.placedSlots[emergency.slotId]].name} is verwoest door ${emergency.type}!`, 'error');
-                            GameLogic.sloopBuilding(emergency.slotId, true); // true = verwoest
+                            // Tijd is op en er was geen hulp
+                            EmergencyManager.failEmergency(emergency.slotId, emergency.type);
                         }
                     }
                 });
             },
 
             /**
-             * Vind de *eerste* beschikbare station van een bepaald type.
-             * @param {string} serviceType - 'fire', 'police', of 'hospital'
-             * @returns {string|null} - De slotId van het station, of null.
+             * Lost een noodgeval op (hulp is gearriveerd of fallback).
+             * @param {string} slotId - Het slot-ID van het noodgeval.
+             * @param {string} type - Het type noodgeval (fire, crime, medical).
+             * @param {boolean} [silent=false] - Indien true, toon geen bericht (voor sloop).
              */
-            findStation: (serviceType) => {
-                const found = Object.entries(GameState.placedSlots).find(([slotId, buildingKey]) => {
-                    return BuildingTypes[buildingKey]?.serviceType === serviceType;
-                });
-                return found ? found[0] : null; // Retourneer alleen de slotId
-            },
-
-            /**
-             * Lost een noodgeval op (wanneer voertuig aankomt of gebouw wordt verwoest).
-             */
-            resolveEmergency: (slotId, type, isSilent = false) => {
+            resolveEmergency: (slotId, type, silent = false) => {
                 const index = GameState.activeEmergencies.findIndex(e => e.slotId === slotId);
                 if (index > -1) {
                     GameState.activeEmergencies.splice(index, 1);
 
-                    if (!isSilent && type) {
-                        UIManager.showMessage(`✅ Noodgeval (${type}) opgelost!`, 'info');
+                    if (!silent) {
+                        const buildingName = BuildingTypes[GameState.placedSlots[slotId]]?.name || 'gebouw';
+                        UIManager.showMessage(`✅ Noodgeval (${type}) bij ${buildingName} is opgelost!`, 'info');
                     }
-
-                    UIManager.renderBoard(); // Update de UI om marker te verwijderen
+                    UIManager.renderBoard(); // Verwijder de marker
                     GameLogic.saveGame();
                 }
+            },
+
+            /**
+             * Noodgeval mislukt (tijd is op).
+             */
+            failEmergency: (slotId, type) => {
+                UIManager.showMessage(`🚨 MISLUKT! Het noodgeval (${type}) kon niet op tijd worden opgelost.`, 'error');
+                // Verwoest het gebouw
+                GameLogic.sloopBuilding(slotId, true);
+                // `sloopBuilding` handelt het verwijderen van de emergency af via `resolveEmergency(silent=true)`
+            },
+
+            /**
+             * Vindt het dichtstbijzijnde (voor nu: *enige*) beschikbare station.
+             * @param {string} serviceType - 'fire', 'police', of 'medical'.
+             * @returns {string|null} - Het slotId van het station, of null.
+             */
+            findStation: (serviceType) => {
+                // TODO: Vind het *dichtstbijzijnde* station.
+                // Voor nu: vind het *eerste* station dat we tegenkomen.
+                for (const slotId in GameState.placedSlots) {
+                    const buildingType = GameState.placedSlots[slotId];
+                    const building = BuildingTypes[buildingType];
+                    if (building && building.serviceType === serviceType) {
+                        return slotId; // Gevonden!
+                    }
+                }
+                return null; // Geen station van dit type gebouwd
             }
         };
-
 
         /**
          * =================================================================
          * Sectie 7: Initialisatie
+         * Start het spel wanneer de pagina is geladen.
          * =================================================================
          */
-
-        function initGame() {
-            // 1. Laad opgeslagen data (vooral placedSlots)
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Laad opgeslagen spel (indien aanwezig)
             GameLogic.loadGame();
 
-            // 2. Bereken de resource-state op basis van geladen slots
+            // 2. Initialiseer stats op basis van geladen data
             GameLogic.updateStatsFromScratch();
 
-            // 3. Render de UI met de geladen en berekende data
+            // 3. Render de UI
+            UIManager.renderBuildMenu();
             UIManager.renderBoard();
-            UIManager.renderBuildMenu(); // Render tabs en knoppen
+
+            // 4. Update alle displays
             UIManager.updateMoney();
             UIManager.updateHappiness();
             UIManager.updateDayNightCycle();
-            UIManager.updateResourceStats(); // Toon de berekende resources
+            UIManager.updateResourceStats();
+            UIManager.updateBuildMenuAffordability(); // Zorg dat knoppen kloppen met geladen saldo
 
-            // 4. Initialiseer kaart-interacties
-            UIManager.initMapDrag();
+            // 5. Activeer interacties
+            UIManager.initStartScherm(); // Wacht op de startknop
+            UIManager.initMapDrag(); // Maak de kaart sleepbaar
 
-            // 5. Toon startscherm (wacht op gebruikersinteractie)
-            UIManager.initStartScherm();
+            // 6. Maak de game-functies globaal beschikbaar voor de HTML onclicks
+            // Dit is nodig omdat we een module script gebruiken.
+            window.UIManager = UIManager;
+            window.GameLogic = GameLogic;
+            window.EmergencyManager = EmergencyManager;
 
-            // 6. Globale listeners
-            window.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    UIManager.forceCloseModal();
-                }
-            });
-
-            console.log("Builder’s Village is geïnitialiseerd.");
-            console.log("Geladen GameState:", GameState);
-        }
-
-        // Start het spel
-        window.onload = initGame;
-
-        // Maak functies globaal beschikbaar voor HTML onclick events
-        window.UIManager = UIManager;
-        window.GameLogic = GameLogic;
-        window.EmergencyManager = EmergencyManager; // Maak ook beschikbaar (voor debuggen)
+            console.log("Builder's Village is klaar om te starten.");
+        });
 
     </script>
 </body>
 
 </html>
-
