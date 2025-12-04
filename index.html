@@ -1094,6 +1094,50 @@
                 powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
                 serviceType: null,
             },
+            // --- Categorie: INDUSTRIE (Extra Toevoegingen) ---
+            'distribution_center_1': {
+                name: 'Distributiecentrum',
+                description: 'Opslag en logistiek. Veel verkeer, redelijk inkomen.',
+                cost: 5000,
+                emoji: '🚚',
+                category: 'industrie',
+                happinessEffect: -3,
+                income: 1500,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 10, waterUsage: 5, wasteProduction: 8,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'robotics_factory_1': {
+                name: 'Robotica Fabriek',
+                description: 'High-tech productie. Schoner dan oude industrie.',
+                cost: 15000,
+                emoji: '🤖',
+                category: 'industrie',
+                happinessEffect: -2,
+                income: 4500,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 25, waterUsage: 10, wasteProduction: 5,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'brewery_1': {
+                name: 'Brouwerij',
+                description: 'Lokaal bier brouwen. Ruikt een beetje, maar mensen houden ervan.',
+                cost: 6000,
+                emoji: '🍺',
+                category: 'industrie',
+                happinessEffect: 1, // People like beer
+                income: 2000,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 12, waterUsage: 20, wasteProduction: 10,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
 
             // --- Vermaak / Cultuur ---
             'cinema': {
@@ -1167,6 +1211,49 @@
                 population: 0,
                 upgradeTo: null,
                 powerUsage: 0, waterUsage: 1, wasteProduction: 1,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            // --- Categorie: VERMAAK (Extra Toevoegingen) ---
+            'botanical_garden_1': {
+                name: 'Botanische Tuin',
+                description: 'Prachtige planten en rust. Zeer goed voor geluk.',
+                cost: 5000,
+                emoji: '🌺',
+                category: 'vermaak',
+                happinessEffect: 10,
+                income: 200, // Tickets
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 2, waterUsage: 15, wasteProduction: 2,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'sports_complex_1': {
+                name: 'Sportcomplex',
+                description: 'Voetbal en atletiek. Houdt de bevolking fit.',
+                cost: 12000,
+                emoji: '⚽',
+                category: 'vermaak',
+                happinessEffect: 8,
+                income: 1000,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 10, waterUsage: 10, wasteProduction: 5,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'circus_tent_1': {
+                name: 'Circus',
+                description: 'Komt dat zien! Plezier voor jong en oud.',
+                cost: 7500,
+                emoji: '🎪',
+                category: 'vermaak',
+                happinessEffect: 6,
+                income: 1800,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 15, waterUsage: 5, wasteProduction: 8,
                 powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
                 serviceType: null,
             },
@@ -2067,6 +2154,7 @@
         };
 
 
+
         const LoanSettings = {
             MIN_LOAN: 10000,
             MAX_LOAN: 100000,
@@ -2386,8 +2474,8 @@
          */
         const GameSettings = {
             // ================== NIEUWE INSTELLINGEN ==================
-            GAME_VERSION: "v1.7.0",
-            LAST_UPDATE: "14-11-2025",
+            GAME_VERSION: "v1.7.1",
+            LAST_UPDATE: "4-12-2025",
             // ================== EINDE NIEUWE INSTELLINGEN ==================
             TICK_INTERVAL: 10000, // 10 seconden
             DAY_NIGHT_TICK_DURATION: 6, // 1 minuut per cyclus
@@ -4061,3 +4149,4 @@
 </body>
 
 </html>
+
