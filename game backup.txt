@@ -1,4 +1,5 @@
 
+<!-- Builders village by Boris de Bruin -->
 <!DOCTYPE html>
 <html lang="nl">
 
@@ -438,6 +439,13 @@
             font-size: 2rem;
             z-index: 15;
             /* Boven wegen, onder slots */
+            display: inline-block;
+            /* zorg dat scaleX/scaleY auto's goed flipt */
+            transform-origin: center center;
+            /* flip rond midden van de emoji */
+            will-change: transform;
+            backface-visibility: hidden;
+            transform-style: preserve-3d;
         }
 
         /* --- NIEUW: Hulpvoertuigen --- */
@@ -450,15 +458,17 @@
             text-shadow: 0 0 5px white;
             transition: transform 0.2s;
             /* Voor 'wiebelen' */
+            backface-visibility: hidden;
+            transform-style: preserve-3d;
         }
 
         @keyframes drive-horizontal-ltr {
             from {
-                transform: translateX(-100px);
+                transform: translateX(-100px) rotateY(0deg);
             }
 
             to {
-                transform: translateX(2550px);
+                transform: translateX(2550px) rotateY(0deg);
             }
 
             /* 2500px map + 50px */
@@ -466,21 +476,21 @@
 
         @keyframes drive-horizontal-rtl {
             from {
-                transform: translateX(2550px) scaleX(-1);
+                transform: translateX(2550px) rotateY(180deg);
             }
 
             to {
-                transform: translateX(-100px) scaleX(-1);
+                transform: translateX(-100px) rotateY(180deg);
             }
         }
 
         @keyframes drive-vertical-ttb {
             from {
-                transform: translateY(-100px);
+                transform: translateY(-100px) translateZ(0);
             }
 
             to {
-                transform: translateY(2050px);
+                transform: translateY(2050px) translateZ(0);
             }
 
             /* 2000px map + 50px */
@@ -488,11 +498,11 @@
 
         @keyframes drive-vertical-btt {
             from {
-                transform: translateY(2050px) scaleY(-1);
+                transform: translateY(2050px) translateZ(0);
             }
 
             to {
-                transform: translateY(-100px) scaleY(-1);
+                transform: translateY(-100px) translateZ(0);
             }
         }
 
@@ -516,6 +526,55 @@
             left: 1810px;
             animation: drive-vertical-btt 20s linear infinite;
         }
+
+        /* --- NIEUW: Hulpvoertuigen Animaties --- */
+        .emergency-vehicle {
+            position: absolute;
+            font-size: 2.5rem;
+            z-index: 30;
+            text-shadow: 0 0 5px white;
+            transition: transform 0.2s;
+        }
+
+        @keyframes drive-horizontal-ltr {
+            from {
+                transform: translateX(-100px) rotateY(0deg);
+            }
+
+            to {
+                transform: translateX(2550px) rotateY(0deg);
+            }
+        }
+
+        @keyframes drive-horizontal-rtl {
+            from {
+                transform: translateX(2550px) rotateY(180deg);
+            }
+
+            to {
+                transform: translateX(-100px) rotateY(180deg);
+            }
+        }
+
+        @keyframes drive-vertical-ttb {
+            from {
+                transform: translateY(-100px) translateZ(0);
+            }
+
+            to {
+                transform: translateY(2050px) translateZ(0);
+            }
+        }
+
+        @keyframes drive-vertical-btt {
+            from {
+                transform: translateY(2050px) translateZ(0);
+            }
+
+            to {
+                transform: translateY(-100px) translateZ(0);
+            }
+        }
     </style>
 </head>
 
@@ -536,9 +595,6 @@
                 Start Spel
             </button>
 
-            <p class="text-sm mt-4 text-gray-500">
-                ✨ Builders Village · Boris de Bruin
-            </p>
 
             <p class="text-sm mt-4 text-gray-500">
                 Aanbevolen: speel Builders Village op een <span class="font-semibold">laptop</span>
@@ -646,6 +702,12 @@
                 class="bg-gray-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition-all duration-200">
                 Sloop Modus 🏗️
             </button>
+            <!-- ================== NIEUWE KNOP ================== -->
+            <button onclick="UIManager.openModal('gameMenu')"
+                class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition-all duration-200">
+                Spel Menu ⚙️
+            </button>
+            <!-- ================== EINDE NIEUWE KNOP ================== -->
         </div>
     </div>
 
@@ -1095,20 +1157,6 @@
                 powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
                 serviceType: null,
             },
-            'arcade_1': {
-                name: 'Arcade',
-                description: 'Plezier voor de jeugd, verhoogt geluk licht.',
-                cost: 2000,
-                emoji: '🕹️',
-                category: 'vermaak',
-                happinessEffect: 4,
-                income: 500,
-                population: 0,
-                upgradeTo: null,
-                powerUsage: 6, waterUsage: 1, wasteProduction: 2,
-                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
-                serviceType: null,
-            },
             'playground_1': {
                 name: 'Speeltuin',
                 description: 'Gratis vermaak voor gezinnen; laag verbruik.',
@@ -1466,7 +1514,559 @@
                 serviceType: null,
             },
 
+            // --- NIEUWE ENTERTAINMENT GEBOUWEN ---
+            'arcade_1': {
+                name: 'Arcade',
+                description: 'Plezier voor de jeugd, verhoogt geluk licht.',
+                cost: 2000,
+                emoji: '🕹️',
+                category: 'entertainment',
+                happinessEffect: 4,
+                income: 500,
+                population: 0,
+                upgradeTo: 'arcade_2',
+                powerUsage: 6, waterUsage: 1, wasteProduction: 2,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'nightclub_1': {
+                name: 'Nachtclub',
+                description: 'Avondentertainment. Hoog geluk, veel energie-verbruik.',
+                cost: 18000,
+                emoji: '🎉',
+                category: 'entertainment',
+                happinessEffect: 12,
+                income: 3500,
+                population: 0,
+                upgradeTo: 'nightclub_2',
+                powerUsage: 35, waterUsage: 15, wasteProduction: 20,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'nightclub_2': {
+                name: 'Mega Nachtclub',
+                description: 'Prestigieus uitgaansoord. Elite-evenementen.',
+                cost: 45000,
+                emoji: '✨🎉',
+                category: 'entertainment',
+                happinessEffect: 18,
+                income: 8000,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 60, waterUsage: 30, wasteProduction: 40,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'bowling_alley_1': {
+                name: 'Bowlingbaan',
+                description: 'Familie-vriendelijk uitgaan.',
+                cost: 8500,
+                emoji: '🎳',
+                category: 'entertainment',
+                happinessEffect: 6,
+                income: 1500,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 12, waterUsage: 5, wasteProduction: 8,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'ice_rink_1': {
+                name: 'IJsbaan',
+                description: 'Winterse attractie; populair met families.',
+                cost: 16000,
+                emoji: '⛸️',
+                category: 'entertainment',
+                happinessEffect: 8,
+                income: 2200,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 40, waterUsage: 8, wasteProduction: 10,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'aquarium_1': {
+                name: 'Aquarium',
+                description: 'Educatief en mooi. Trekt toeristen aan.',
+                cost: 20000,
+                emoji: '🐠',
+                category: 'entertainment',
+                happinessEffect: 9,
+                income: 2800,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 25, waterUsage: 50, wasteProduction: 15,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'zoo_1': {
+                name: 'Dierenpark',
+                description: 'Groot dierenpark. Populaire familiebestemming.',
+                cost: 35000,
+                emoji: '🦁',
+                category: 'entertainment',
+                happinessEffect: 14,
+                income: 4500,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 20, waterUsage: 60, wasteProduction: 30,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'theater_1': {
+                name: 'Theater',
+                description: 'Klassieke podiumkunsten. Cultureel.',
+                cost: 14000,
+                emoji: '🎭',
+                category: 'entertainment',
+                happinessEffect: 10,
+                income: 2100,
+                population: 0,
+                upgradeTo: 'theater_2',
+                powerUsage: 18, waterUsage: 8, wasteProduction: 12,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'theater_2': {
+                name: 'Grand Theater',
+                description: 'Een groot theater voor grote productie.',
+                cost: 35000,
+                emoji: '🎬',
+                category: 'entertainment',
+                happinessEffect: 16,
+                income: 5500,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 40, waterUsage: 15, wasteProduction: 20,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'spa_resort_1': {
+                name: 'Spa Resort',
+                description: 'Luxe ontspanning. Hoog geluk, premium prijzen.',
+                cost: 28000,
+                emoji: '💆',
+                category: 'entertainment',
+                happinessEffect: 13,
+                income: 6000,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 30, waterUsage: 80, wasteProduction: 25,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'skateboard_park_1': {
+                name: 'Skateboard Park',
+                description: 'Extreme sport hub voor jongeren.',
+                cost: 3500,
+                emoji: '🛹',
+                category: 'entertainment',
+                happinessEffect: 5,
+                income: 200,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 0, waterUsage: 2, wasteProduction: 3,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'rock_climbing_1': {
+                name: 'Klimmuur',
+                description: 'Indoor klimmen. Populair met avontuurlijke types.',
+                cost: 6000,
+                emoji: '🧗',
+                category: 'entertainment',
+                happinessEffect: 6,
+                income: 1200,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 8, waterUsage: 3, wasteProduction: 4,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'water_park_1': {
+                name: 'Waterpark',
+                description: 'Zomers waterplezier. Grote geluksboost.',
+                cost: 32000,
+                emoji: '🌊',
+                category: 'entertainment',
+                happinessEffect: 17,
+                income: 5000,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 50, waterUsage: 100, wasteProduction: 35,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'drive_in_cinema_1': {
+                name: 'Autobioscoop',
+                description: 'Klassieke drive-in ervaring. Vintage charm.',
+                cost: 12000,
+                emoji: '🚗🎥',
+                category: 'entertainment',
+                happinessEffect: 7,
+                income: 1800,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 20, waterUsage: 5, wasteProduction: 15,
+                powerCapacity: 0,
+                waterCapacity: 0,
+                wasteCapacity: 0,
+                serviceType: null,
+            },
+            'virtual_reality_1': {
+                name: 'VR-centrum',
+                description: 'Futuristische virtual reality ervaringen.',
+                cost: 15000,
+                emoji: '🥽',
+                category: 'entertainment',
+                happinessEffect: 11,
+                income: 3200,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 45, waterUsage: 2, wasteProduction: 5,
+                powerCapacity: 0,
+                waterCapacity: 0,
+                wasteCapacity: 0,
+                serviceType: null,
+            },
+            // --- WONINGEN (extra) ---
+            'row_house_1': {
+                name: 'Rijhuis (Lvl 1)',
+                description: 'Betaalbare rijwoning, lage kosten.',
+                cost: 1200,
+                emoji: '🏡',
+                category: 'woning',
+                happinessEffect: 1,
+                income: 40,
+                population: 3,
+                upgradeTo: 'row_house_2',
+                powerUsage: 1, waterUsage: 1, wasteProduction: 1,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'row_house_2': {
+                name: 'Rijhuis (Lvl 2)',
+                description: 'Modern rijhuis, betere voorzieningen.',
+                cost: 3500,
+                emoji: '🏠',
+                category: 'woning',
+                happinessEffect: 3,
+                income: 150,
+                population: 8,
+                upgradeTo: 'row_house_3',
+                powerUsage: 3, waterUsage: 3, wasteProduction: 3,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'row_house_3': {
+                name: 'Stadsrijhuis (Lvl 3)',
+                description: 'Volledig gerenoveerde rijhuizen.',
+                cost: 12000,
+                emoji: '🏘️',
+                category: 'woning',
+                happinessEffect: 6,
+                income: 500,
+                population: 25,
+                upgradeTo: null,
+                powerUsage: 8, waterUsage: 10, wasteProduction: 9,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+            // --- COMMERCIEEL (extra) ---
+            'bakery_1': {
+                name: 'Bakkerij',
+                description: 'Lokale bakker; verhoogt buurtgeluk.',
+                cost: 900,
+                emoji: '🥐',
+                category: 'commercieel',
+                happinessEffect: 1,
+                income: 300,
+                population: 0,
+                upgradeTo: 'bakery_2',
+                powerUsage: 2, waterUsage: 1, wasteProduction: 1,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'bakery_2': {
+                name: 'Ambachtelijke Bakkerij',
+                description: 'Populaire bakkerij met catering.',
+                cost: 3200,
+                emoji: '🥖',
+                category: 'commercieel',
+                happinessEffect: 3,
+                income: 900,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 6, waterUsage: 3, wasteProduction: 3,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'startup_hub_1': {
+                name: 'Startup Hub',
+                description: 'Kleine flexworkspaces, stimuleert innovatie.',
+                cost: 5500,
+                emoji: '🚀',
+                category: 'commercieel',
+                happinessEffect: 2,
+                income: 1200,
+                population: 0,
+                upgradeTo: 'startup_hub_2',
+                powerUsage: 10, waterUsage: 3, wasteProduction: 2,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'startup_hub_2': {
+                name: 'Innovatie Campus',
+                description: 'Grote campus met hoge productiviteit.',
+                cost: 20000,
+                emoji: '🏢🚀',
+                category: 'commercieel',
+                happinessEffect: 5,
+                income: 4200,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 30, waterUsage: 8, wasteProduction: 6,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+            // --- INDUSTRIE (extra) ---
+            'light_industry_1': {
+                name: 'Lichte Industrie',
+                description: 'Kleine productiefaciliteit; minder vervuilend.',
+                cost: 3000,
+                emoji: '🏗️',
+                category: 'industrie',
+                happinessEffect: -3,
+                income: 1200,
+                population: 0,
+                upgradeTo: 'light_industry_2',
+                powerUsage: 12, waterUsage: 6, wasteProduction: 6,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'light_industry_2': {
+                name: 'Geavanceerde Werkplaats',
+                description: 'Efficiëntere machines, hogere winst.',
+                cost: 10000,
+                emoji: '🏭⚙️',
+                category: 'industrie',
+                happinessEffect: -7,
+                income: 3800,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 35, waterUsage: 18, wasteProduction: 15,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'artisan_park_1': {
+                name: 'Ambachtspark',
+                description: 'Kleine ateliers; milder op geluk.',
+                cost: 1800,
+                emoji: '🔨',
+                category: 'industrie',
+                happinessEffect: -1,
+                income: 500,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 5, waterUsage: 2, wasteProduction: 2,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+            // --- VERMAAK (extra) ---
+            'arcade_2': {
+                name: 'Arcade (Retro Hall)',
+                description: 'Grotere arcade met toernooien en merchandise.',
+                cost: 7000,
+                emoji: '🕹️✨',
+                category: 'entertainment',
+                happinessEffect: 7,
+                income: 1400,
+                population: 0,
+                upgradeTo: 'arcade_3',
+                powerUsage: 12, waterUsage: 2, wasteProduction: 4,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'arcade_3': {
+                name: 'Arcade (Entertainment Complex)',
+                description: 'Volledig complex met VR-rooms en events.',
+                cost: 22000,
+                emoji: '🕹️🎪',
+                category: 'entertainment',
+                happinessEffect: 12,
+                income: 4200,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 30, waterUsage: 5, wasteProduction: 8,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'open_air_stage_1': {
+                name: 'Openluchtpodium',
+                description: 'Kleine podia en lokale optredens.',
+                cost: 2800,
+                emoji: '🎤',
+                category: 'entertainment',
+                happinessEffect: 5,
+                income: 700,
+                population: 0,
+                upgradeTo: 'open_air_stage_2',
+                powerUsage: 5, waterUsage: 2, wasteProduction: 2,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'open_air_stage_2': {
+                name: 'Festivalpodium',
+                description: 'Trekt grote menigten; veel toerisme.',
+                cost: 14000,
+                emoji: '🎪',
+                category: 'entertainment',
+                happinessEffect: 14,
+                income: 3200,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 28, waterUsage: 8, wasteProduction: 12,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+            // --- PUBLIEK (extra) ---
+            'downtown_school_1': {
+                name: 'Basisschool',
+                description: 'Klassieke openbare school; helpt opleiding.',
+                cost: 2200,
+                emoji: '🏫',
+                category: 'publiek',
+                happinessEffect: 2,
+                income: 150,
+                population: 0,
+                upgradeTo: 'downtown_school_2',
+                powerUsage: 4, waterUsage: 4, wasteProduction: 3,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'downtown_school_2': {
+                name: 'Hogeschool',
+                description: 'Onderwijscentrum; verhoogt talent en geluk.',
+                cost: 12000,
+                emoji: '🎓',
+                category: 'publiek',
+                happinessEffect: 6,
+                income: 800,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 20, waterUsage: 12, wasteProduction: 8,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'community_center_1': {
+                name: 'Buurtcentrum',
+                description: 'Gratis activiteiten voor bewoners.',
+                cost: 3000,
+                emoji: '🏛️',
+                category: 'publiek',
+                happinessEffect: 4,
+                income: 50,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 6, waterUsage: 3, wasteProduction: 2,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+            // --- VOORZIENINGEN (extra) ---
+            'small_solar_1': {
+                name: 'Dakpaneleiland',
+                description: 'Kleine zonne-installatie; schoon maar beperkt.',
+                cost: 6000,
+                emoji: '🔆',
+                category: 'voorziening',
+                happinessEffect: 1,
+                income: 0,
+                population: 0,
+                upgradeTo: 'small_solar_2',
+                powerUsage: 0, waterUsage: 0, wasteProduction: 0,
+                powerCapacity: 25, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'small_solar_2': {
+                name: 'Zonnedakpark',
+                description: 'Groot zonnepark; levert fatsoenlijke stroom.',
+                cost: 20000,
+                emoji: '🌞',
+                category: 'voorziening',
+                happinessEffect: 3,
+                income: 0,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 0, waterUsage: 0, wasteProduction: 0,
+                powerCapacity: 120, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'water_pump_1': {
+                name: 'Pompstation',
+                description: 'Kleine pomp, vergroot watercapaciteit.',
+                cost: 4200,
+                emoji: '🔧💧',
+                category: 'voorziening',
+                happinessEffect: 0,
+                income: 0,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 6, waterUsage: 0, wasteProduction: 1,
+                powerCapacity: 0, waterCapacity: 120, wasteCapacity: 0,
+                serviceType: null,
+            },
+
+            // --- ENTERTAINMENT (extra) ---
+            'mini_golf_1': {
+                name: 'Minigolfbaan',
+                description: 'Gezinsvriendelijke attractie, lage verbruikskosten.',
+                cost: 2400,
+                emoji: '⛳',
+                category: 'entertainment',
+                happinessEffect: 5,
+                income: 400,
+                population: 0,
+                upgradeTo: 'mini_golf_2',
+                powerUsage: 2, waterUsage: 4, wasteProduction: 2,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'mini_golf_2': {
+                name: 'Resort Minigolf',
+                description: 'Themagebied met horeca en shows.',
+                cost: 12000,
+                emoji: '🏖️⛳',
+                category: 'entertainment',
+                happinessEffect: 12,
+                income: 2200,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 18, waterUsage: 20, wasteProduction: 10,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+            'escape_room_1': {
+                name: 'Escape Room',
+                description: 'Populaire indoor ervaring; hoge winst per m2.',
+                cost: 3200,
+                emoji: '🔒',
+                category: 'entertainment',
+                happinessEffect: 6,
+                income: 1100,
+                population: 0,
+                upgradeTo: null,
+                powerUsage: 8, waterUsage: 1, wasteProduction: 1,
+                powerCapacity: 0, waterCapacity: 0, wasteCapacity: 0,
+                serviceType: null,
+            },
+
         };
+
 
         const LoanSettings = {
             MIN_LOAN: 10000,
@@ -1559,12 +2159,6 @@
             { id: 'slot-49', top: '350px', left: '2200px' },
             { id: 'slot-50', top: '350px', left: '2300px' },
             { id: 'slot-51', top: '350px', left: '2400px' },
-            { id: 'slot-52', top: '400px', left: '1900px' },
-            { id: 'slot-53', top: '400px', left: '2000px' },
-            { id: 'slot-54', top: '400px', left: '2100px' },
-            { id: 'slot-55', top: '400px', left: '2200px' },
-            { id: 'slot-56', top: '400px', left: '2300px' },
-            { id: 'slot-57', top: '400px', left: '2400px' },
             // --- BLOK 1 (X: 100-500, Y: 600) ---
             { id: 'slot-58', top: '600px', left: '100px' },
             { id: 'slot-59', top: '600px', left: '200px' },
@@ -1792,6 +2386,10 @@
          * (Onveranderd)
          */
         const GameSettings = {
+            // ================== NIEUWE INSTELLINGEN ==================
+            GAME_VERSION: "v1.7.0",
+            LAST_UPDATE: "14-11-2025",
+            // ================== EINDE NIEUWE INSTELLINGEN ==================
             TICK_INTERVAL: 10000, // 10 seconden
             DAY_NIGHT_TICK_DURATION: 6, // 1 minuut per cyclus
             RANDOM_EVENT_CHANCE: 0.15,
@@ -2267,6 +2865,9 @@
                     case 'finance': htmlContent = UIManager.getFinanceMenuHTML(stats); break;
                     case 'population': htmlContent = UIManager.getPopulationMenuHTML(stats); break;
                     case 'upgrade': if (slotId) { htmlContent = UIManager.getUpgradeMenuHTML(slotId, stats); } break;
+                    // ================== NIEUWE CASE ==================
+                    case 'gameMenu': htmlContent = UIManager.getGameMenuHTML(); break;
+                    // ================== EINDE NIEUWE CASE ==================
                     case 'confirmReset': htmlContent = UIManager.getConfirmResetHTML(); break;
                 }
                 DOM.modalContent.innerHTML = htmlContent;
@@ -2325,17 +2926,10 @@
                             <p class="text-xl font-bold text-yellow-700">€${Math.floor(stats.totalBuildingValue).toLocaleString('nl-NL')}</p>
                         </div>
                         
+                        <!-- ================== RESET KNOP VERWIJDERD ================== -->
                         <hr class="my-4">
-                        
-                        <div>
-                             <p class="text-center text-gray-600 mb-2">Spel opslaan/resetten</p>
-                             <button 
-                                onclick="GameLogic.confirmReset()" 
-                                class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all duration-200">
-                                Reset Spel...
-                            </button>
-                            <p class="text-center text-xs text-gray-500 mt-2">Spel wordt automatisch opgeslagen.</p>
-                        </div>
+                        <p class="text-center text-xs text-gray-500 mt-2">Spel wordt automatisch opgeslagen. Ga naar "Spel Menu" voor meer opties.</p>
+                        <!-- ================== EINDE AANPASSING ================== -->
                     </div>
                 `;
             },
@@ -2512,6 +3106,59 @@
                 `;
             },
 
+            // ================== NIEUWE FUNCTIE ==================
+            /**
+             * Genereert de HTML voor het Spel Menu modal.
+             */
+            getGameMenuHTML: () => {
+                return `
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-3xl font-bold text-indigo-800">Spel Menu & Info ⚙️</h2>
+                        <button onclick="UIManager.forceCloseModal()" class="text-gray-500 hover:text-gray-900 text-2xl font-bold">&times;</button>
+                    </div>
+                    
+                    <!-- Spel Info -->
+                    <div class="p-4 bg-gray-50 rounded-lg border mb-6">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">Spel Informatie</h3>
+                        <p class="text-gray-700"><strong>Versie:</strong> ${GameSettings.GAME_VERSION || 'v1.0'}</p>
+                        <p class="text-gray-700"><strong>Laatste Update:</strong> ${GameSettings.LAST_UPDATE || 'Onbekend'}</p>
+                        <p class="text-sm text-gray-500 mt-2">Builder’s Village door Boris de Bruin.</p>
+                    </div>
+
+                    <!-- Import/Export -->
+                    <div class="space-y-4">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">Spel Data Beheren</h3>
+                        <p class="text-sm text-gray-600">Exporteer je spel om een back-up te maken of om op een andere computer verder te spelen.</p>
+                        
+                        <button 
+                            onclick="GameLogic.exportGame()" 
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all duration-200">
+                            Exporteer Opgeslagen Spel
+                        </button>
+                        
+                        <!-- Verborgen file input -->
+                        <input type="file" id="import-file-input" accept=".json,.txt" style="display: none;" onchange="GameLogic.handleFileImport(event)">
+                        
+                        <!-- Label dat eruitziet als een knop -->
+                        <label for="import-file-input" 
+                            class="w-full text-center block bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all duration-200 cursor-pointer">
+                            Importeer Opgeslagen Spel
+                        </label>
+                        
+                        <hr class="my-4 pt-4">
+                        
+                        <!-- Reset Knop (verplaatst) -->
+                        <p class="text-center text-gray-600 mb-2">Reset al je voortgang en begin opnieuw.</p>
+                         <button 
+                            onclick="GameLogic.confirmReset()" 
+                            class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition-all duration-200">
+                            Reset Spel...
+                        </button>
+                    </div>
+                `;
+            },
+            // ================== EINDE NIEUWE FUNCTIE ==================
+
             /**
              * Get Confirm Reset HTML (Onveranderd, maar forceert sluiten)
              */
@@ -2654,7 +3301,7 @@
                 }
 
                 // 4. Inkomen toevoegen (alleen als resources OK zijn)
-                const earned = stats.netEarned; // netEarned is al 0 als resources niet OK zijn
+                const earned = stats.netEarned; // netEarned is al 0 als resources niet OK zijn, of als geluk 0 is
                 GameState.saldo += earned;
 
                 // 5. Melding van de tick
@@ -3132,7 +3779,93 @@
                     UIManager.showMessage("Spel gereset. Pagina wordt herladen...", "info");
                     setTimeout(() => { window.location.reload(); }, 2000);
                 } catch (e) { console.error("Reset mislukt:", e); }
+            },
+
+            // ================== NIEUWE FUNCTIES ==================
+            /**
+             * Triggert het downloaden van het opslagbestand.
+             */
+            exportGame: () => {
+                try {
+                    // 1. Zorg dat de laatste data is opgeslagen (voor de zekerheid)
+                    GameLogic.saveGame();
+
+                    // 2. Haal de huidige save data op uit localStorage
+                    const saveDataString = localStorage.getItem(GameSettings.SAVE_KEY);
+                    if (!saveDataString) {
+                        UIManager.showMessage("Geen speldata gevonden om te exporteren.", "error");
+                        return;
+                    }
+
+                    // 3. Maak de download link
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(saveDataString);
+                    const downloadAnchorNode = document.createElement('a');
+                    downloadAnchorNode.setAttribute("href", dataStr);
+
+                    // Genereer een bestandsnaam met datum
+                    const date = new Date();
+                    const dateStr = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getDate().toString().padStart(2, '0')}`;
+                    downloadAnchorNode.setAttribute("download", `builders_village_save_${dateStr}.json`);
+
+                    // 4. Trigger de download
+                    document.body.appendChild(downloadAnchorNode);
+                    downloadAnchorNode.click();
+                    downloadAnchorNode.remove();
+
+                    UIManager.showMessage("Spel geëxporteerd als JSON-bestand!", "info");
+                    UIManager.forceCloseModal(); // Sluit het menu
+
+                } catch (e) {
+                    console.error("Exporteren mislukt:", e);
+                    UIManager.showMessage("Fout bij het exporteren van het spel.", "error");
+                }
+            },
+
+            /**
+             * Verwerkt het geselecteerde importbestand.
+             * @param {Event} event - Het 'change' event van de file input.
+             */
+            handleFileImport: (event) => {
+                const file = event.target.files[0];
+                if (!file) return; // Geen bestand geselecteerd
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const importedDataString = e.target.result;
+                        const importedData = JSON.parse(importedDataString);
+
+                        // Simpele validatie om te controleren of dit een save file lijkt
+                        if (importedData && importedData.placedSlots && typeof importedData.saldo === 'number' && typeof importedData.happiness === 'number') {
+
+                            // Sla de nieuwe data op in localStorage
+                            localStorage.setItem(GameSettings.SAVE_KEY, importedDataString);
+
+                            UIManager.showMessage("Spel succesvol geïmporteerd! Spel wordt herladen...", "info");
+                            UIManager.forceCloseModal(); // Sluit het menu
+
+                            // Herlaad de pagina om de nieuwe state te laden
+                            // Dit is de veiligste manier om te zorgen dat de hele state klopt
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 2000);
+
+                        } else {
+                            UIManager.showMessage("Geïmporteerd bestand is ongeldig of corrupt.", "error");
+                        }
+                    } catch (err) {
+                        console.error("Importeren mislukt:", err);
+                        UIManager.showMessage("Fout bij het lezen van het importbestand.", "error");
+                    }
+                };
+
+                // Lees het bestand als tekst
+                reader.readAsText(file);
+
+                // Reset de file input zodat dezelfde file opnieuw gekozen kan worden (voor het geval de eerste faalt)
+                event.target.value = null;
             }
+            // ================== EINDE NIEUWE FUNCTIES ==================
         };
 
         /**
@@ -3230,95 +3963,102 @@
                         if (emergency.isDispatched) {
                             // Tijd is op, maar hulp was onderweg (dit zou opgelost moeten worden door animateVehicle.onfinish)
                             // Dit is een fallback voor het geval de animatie faalt
-                            EmergencyManager.resolveEmergency(emergency.slotId, emergency.type, true);
+                            EmergencyManager.resolveEmergency(emergency.slotId, emergency.type);
                         } else {
-                            // Tijd is op en geen hulp gestuurd
-                            UIManager.showMessage(`Te laat! ${BuildingTypes[GameState.placedSlots[emergency.slotId]].name} is verwoest door ${emergency.type}!`, 'error');
-                            GameLogic.sloopBuilding(emergency.slotId, true); // true = verwoest
+                            // Tijd is op en er was geen hulp
+                            EmergencyManager.failEmergency(emergency.slotId, emergency.type);
                         }
                     }
                 });
             },
 
             /**
-             * Vind de *eerste* beschikbare station van een bepaald type.
-             * @param {string} serviceType - 'fire', 'police', of 'hospital'
-             * @returns {string|null} - De slotId van het station, of null.
+             * Lost een noodgeval op (hulp is gearriveerd of fallback).
+             * @param {string} slotId - Het slot-ID van het noodgeval.
+             * @param {string} type - Het type noodgeval (fire, crime, medical).
+             * @param {boolean} [silent=false] - Indien true, toon geen bericht (voor sloop).
              */
-            findStation: (serviceType) => {
-                const found = Object.entries(GameState.placedSlots).find(([slotId, buildingKey]) => {
-                    return BuildingTypes[buildingKey]?.serviceType === serviceType;
-                });
-                return found ? found[0] : null; // Retourneer alleen de slotId
-            },
-
-            /**
-             * Lost een noodgeval op (wanneer voertuig aankomt of gebouw wordt verwoest).
-             */
-            resolveEmergency: (slotId, type, isSilent = false) => {
+            resolveEmergency: (slotId, type, silent = false) => {
                 const index = GameState.activeEmergencies.findIndex(e => e.slotId === slotId);
                 if (index > -1) {
                     GameState.activeEmergencies.splice(index, 1);
 
-                    if (!isSilent && type) {
-                        UIManager.showMessage(`✅ Noodgeval (${type}) opgelost!`, 'info');
+                    if (!silent) {
+                        const buildingName = BuildingTypes[GameState.placedSlots[slotId]]?.name || 'gebouw';
+                        UIManager.showMessage(`✅ Noodgeval (${type}) bij ${buildingName} is opgelost!`, 'info');
                     }
-
-                    UIManager.renderBoard(); // Update de UI om marker te verwijderen
+                    UIManager.renderBoard(); // Verwijder de marker
                     GameLogic.saveGame();
                 }
+            },
+
+            /**
+             * Noodgeval mislukt (tijd is op).
+             */
+            failEmergency: (slotId, type) => {
+                UIManager.showMessage(`🚨 MISLUKT! Het noodgeval (${type}) kon niet op tijd worden opgelost.`, 'error');
+                // Verwoest het gebouw
+                GameLogic.sloopBuilding(slotId, true);
+                // `sloopBuilding` handelt het verwijderen van de emergency af via `resolveEmergency(silent=true)`
+            },
+
+            /**
+             * Vindt het dichtstbijzijnde (voor nu: *enige*) beschikbare station.
+             * @param {string} serviceType - 'fire', 'police', of 'medical'.
+             * @returns {string|null} - Het slotId van het station, of null.
+             */
+            findStation: (serviceType) => {
+                // TODO: Vind het *dichtstbijzijnde* station.
+                // Voor nu: vind het *eerste* station dat we tegenkomen.
+                for (const slotId in GameState.placedSlots) {
+                    const buildingType = GameState.placedSlots[slotId];
+                    const building = BuildingTypes[buildingType];
+                    if (building && building.serviceType === serviceType) {
+                        return slotId; // Gevonden!
+                    }
+                }
+                return null; // Geen station van dit type gebouwd
             }
         };
-
 
         /**
          * =================================================================
          * Sectie 7: Initialisatie
+         * Start het spel wanneer de pagina is geladen.
          * =================================================================
          */
-
-        function initGame() {
-            // 1. Laad opgeslagen data (vooral placedSlots)
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Laad opgeslagen spel (indien aanwezig)
             GameLogic.loadGame();
 
-            // 2. Bereken de resource-state op basis van geladen slots
+            // 2. Initialiseer stats op basis van geladen data
             GameLogic.updateStatsFromScratch();
 
-            // 3. Render de UI met de geladen en berekende data
+            // 3. Render de UI
+            UIManager.renderBuildMenu();
             UIManager.renderBoard();
-            UIManager.renderBuildMenu(); // Render tabs en knoppen
+
+            // 4. Update alle displays
             UIManager.updateMoney();
             UIManager.updateHappiness();
             UIManager.updateDayNightCycle();
-            UIManager.updateResourceStats(); // Toon de berekende resources
+            UIManager.updateResourceStats();
+            UIManager.updateBuildMenuAffordability(); // Zorg dat knoppen kloppen met geladen saldo
 
-            // 4. Initialiseer kaart-interacties
-            UIManager.initMapDrag();
+            // 5. Activeer interacties
+            UIManager.initStartScherm(); // Wacht op de startknop
+            UIManager.initMapDrag(); // Maak de kaart sleepbaar
 
-            // 5. Toon startscherm (wacht op gebruikersinteractie)
-            UIManager.initStartScherm();
+            // 6. Maak de game-functies globaal beschikbaar voor de HTML onclicks
+            // Dit is nodig omdat we een module script gebruiken.
+            window.UIManager = UIManager;
+            window.GameLogic = GameLogic;
+            window.EmergencyManager = EmergencyManager;
 
-            // 6. Globale listeners
-            window.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    UIManager.forceCloseModal();
-                }
-            });
-
-            console.log("Builder’s Village is geïnitialiseerd.");
-            console.log("Geladen GameState:", GameState);
-        }
-
-        // Start het spel
-        window.onload = initGame;
-
-        // Maak functies globaal beschikbaar voor HTML onclick events
-        window.UIManager = UIManager;
-        window.GameLogic = GameLogic;
-        window.EmergencyManager = EmergencyManager; // Maak ook beschikbaar (voor debuggen)
+            console.log("Builder's Village is klaar om te starten.");
+        });
 
     </script>
 </body>
 
 </html>
-
