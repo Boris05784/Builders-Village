@@ -1,0 +1,482 @@
+
+<!DOCTYPE html>
+<html lang="nl">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Builder’s Village</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: #e0f7fa;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        #money {
+            font-size: 22px;
+            margin: 10px;
+            text-align: center;
+        }
+
+        #board {
+            width: 100%;
+            height: 90vh;
+            background-color: #a5d6a7;
+            position: relative;
+        }
+
+        .road {
+            position: absolute;
+            background-color: #333;
+            z-index: 1;
+        }
+
+        .horizontal {
+            height: 60px;
+            width: 100%;
+        }
+
+        .vertical {
+            width: 60px;
+            height: 100%;
+        }
+
+        .slot {
+            width: 60px;
+            height: 60px;
+            position: absolute;
+            background-color: rgba(255, 255, 255, 0.7);
+            border: 2px dashed #444;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 30px;
+            z-index: 5;
+        }
+
+        .car,
+        .car2,
+        .car3 {
+            font-size: 40px;
+            position: absolute;
+            z-index: 10;
+            user-select: none;
+        }
+
+        .car {
+            top: 180px;
+            left: -50px;
+            animation: drive 10s linear infinite;
+            transform: scaleX(-1);
+        }
+
+        .car2 {
+            top: 380px;
+            left: -50px;
+            animation: drive2 12s linear infinite;
+            transform: scaleX(-1);
+        }
+
+        .car3 {
+            left: 500px;
+            top: -30px;
+            animation: drive3 15s linear infinite;
+            transform: scaleX(-1);
+        }
+
+
+        @keyframes drive {
+            from {
+                left: -50px;
+            }
+
+            to {
+                left: 100%;
+            }
+        }
+
+        @keyframes drive2 {
+            from {
+                left: -50px;
+            }
+
+            to {
+                left: 100%;
+            }
+        }
+
+        @keyframes drive3 {
+            from {
+                top: -30px;
+            }
+
+            to {
+                top: 100%;
+            }
+        }
+
+        .walker {
+            position: absolute;
+            top: 410px;
+            /* pas aan afhankelijk van je kaart */
+            left: -50px;
+            font-size: 35px;
+            animation: walk 25s linear infinite;
+            z-index: 15;
+        }
+
+        @keyframes walk {
+            100% {
+                left: -50px;
+            }
+
+            0% {
+                left: 100%;
+            }
+        }
+
+        .walker2 {
+            position: absolute;
+            top: 215px;
+            /* pas aan afhankelijk van je kaart */
+            left: -50px;
+            font-size: 35px;
+            animation: walk 30s linear infinite;
+            z-index: 15;
+        }
+
+        @keyframes walk {
+            100% {
+                left: -50px;
+            }
+
+            0% {
+                left: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="startScreen" style="
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  font-family: sans-serif;
+">
+        <h1 style="font-size: 48px; margin-bottom: 20px;">🏗️ Builder’s Village</h1>
+        <p style="max-width: 500px; text-align: center; font-size: 18px; margin-bottom: 30px;">
+            Welkom bij Builder’s Village! Bouw gebouwen, verdien geld 💰 en laat je stad groeien 🌆. Klik op start om te
+            beginnen.
+        </p>
+        <button onclick="startGame()" style="
+    padding: 12px 24px;
+    font-size: 20px;
+    background-color: #4caf50;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    color: white;
+  ">🎮 Start Spel</button>
+    </div>
+
+
+
+    <h2 id="money" style="text-align: right; margin-right: 40px;">Saldo: €4000</h2>
+    <div
+        style="display:flex; justify-content: center; align-items: flex-start; gap: 40px; margin-top: 10px; flex-wrap: wrap;">
+        <div style="text-align: center;">
+            <span id="houseIcon" draggable="true">🏠</span><br />
+            <small>Huis – €1000<br />+€500 / 10s</small>
+        </div>
+        <div style="text-align: center;">
+            <span id="luxuryIcon" draggable="true">🏡</span><br />
+            <small>Luxe huis – €2000<br />+€1000 / 10s</small>
+        </div>
+        <div style="text-align: center;">
+            <span id="cafeIcon" draggable="true">☕</span><br />
+            <small>Café – €1500<br />+€700 / 10s</small>
+        </div>
+        <div style="text-align: center;">
+            <span id="townhallIcon" draggable="true">🏛️</span><br />
+            <small>Stadhuis – €3000<br />0 opbrengst</small>
+        </div>
+        <div style="text-align: center;">
+            <span id="cinemaIcon" draggable="true">🎬</span><br />
+            <small>Bioscoop – €2500<br />+€1200 / 10s</small>
+        </div>
+        <div style="text-align: center;">
+            <span id="itIcon" draggable="true">💻</span><br />
+            <small>IT-winkel – €1800<br />+€850 / 10s</small>
+        </div>
+        <div style="text-align: center;">
+            <span id="schoolIcon" draggable="true">🏫</span><br />
+            <small>School – €2200<br />+€600 / 10s</small>
+        </div>
+
+        <!-- Nieuwe gebouwen -->
+        <div style="text-align: center;">
+            <span id="bookstoreIcon" draggable="true">📚</span><br />
+            <small>Boekenwinkel – €1600<br />+€750 / 10s</small>
+        </div>
+        <div style="text-align: center;">
+            <span id="partyIcon" draggable="true">🎉</span><br />
+            <small>Feestwinkel – €1700<br />+€800 / 10s</small>
+        </div>
+        <div style="text-align: center;">
+            <span id="supermarketIcon" draggable="true">🛒</span><br />
+            <small>Supermarkt – €2300<br />+€1100 / 10s</small>
+        </div>
+        <div style="text-align: center;">
+            <span id="museumIcon" draggable="true">🖼️</span><br />
+            <small>Museum – €2400<br />+€950 / 10s</small>
+        </div>
+    </div>
+
+    <div id="board">
+        <div class="road horizontal" style="top: 200px;"></div>
+        <div class="road vertical" style="left: 300px;"></div>
+        <div class="road horizontal" style="top: 400px;"></div>
+        <div class="road vertical" style="left: 500px;"></div>
+        <div class="car">🚗</div>
+        <div class="car2">🚙</div>
+        <div class="car3">🚍</div>
+
+        <div class="walker">🚶🏻‍♂️</div>
+        <div class="walker2">🚶🏻‍♀️</div>
+
+
+
+        <div class="road horizontal" style="top: 610px;"></div>
+
+
+        <!-- Bouwsloten -->
+        <div class="slot" style="top: 100px; left: 100px;"></div>
+        <div class="slot" style="top: 100px; left: 200px;"></div>
+        <div class="slot" style="top: 270px; left: 100px;"></div>
+        <div class="slot" style="top: 270px; left: 200px;"></div>
+        <div class="slot" style="top: 100px; left: 400px;"></div>
+        <div class="slot" style="top: 270px; left: 400px;"></div>
+        <div class="slot" style="top: 330px; left: 600px;"></div>
+        <div class="slot" style="top: 470px; left: 600px;"></div>
+        <div class="slot" style="top: 100px; left: 600px;"></div>
+        <div class="slot" style="top: 270px; left: 600px;"></div>
+        <div class="slot" style="top: 470px; left: 100px;"></div>
+        <div class="slot" style="top: 470px; left: 200px;"></div>
+
+        <div class="slot" style="top: 300px; left: 800px;"></div>
+        <div class="slot" style="top: 300px; left: 900px;"></div>
+        <div class="slot" style="top: 300px; left: 1000px;"></div>
+        <div class="slot" style="top: 300px; left: 1100px;"></div>
+        <div class="slot" style="top: 300px; left: 1200px;"></div>
+        <div class="slot" style="top: 300px; left: 1300px;"></div>
+        <div class="slot" style="top: 300px; left: 1400px;"></div>
+        <div class="slot" style="top: 300px; left: 1500px;"></div>
+
+        <div class="slot" style="top: 100px; left: 900px;"></div>
+        <div class="slot" style="top: 100px; left: 800px;"></div>
+        <div class="slot" style="top: 100px; left: 1000px;"></div>
+        <div class="slot" style="top: 100px; left: 1100px;"></div>
+        <div class="slot" style="top: 100px; left: 1200px;"></div>
+        <div class="slot" style="top: 100px; left: 1300px;"></div>
+        <div class="slot" style="top: 470px; left: 400px;"></div>
+        <div class="slot" style="top: 470px; left: 780px;"></div>
+        <div class="slot" style="top: 470px; left: 880px;"></div>
+        <div class="slot" style="top: 470px; left: 980px;"></div>
+        <div class="slot" style="top: 470px; left: 1080px;"></div>
+        <div class="slot" style="top: 470px; left: 1180px;"></div>
+        <div class="slot" style="top: 470px; left: 1280px;"></div>
+        <div class="slot" style="top: 470px; left: 1380px;"></div>
+        <div class="slot" style="top: 470px; left: 1480px;"></div>
+        <div class="slot" style="top: 540px; left: 1470px;"></div>
+        <div class="slot" style="top: 540px; left: 1370px;"></div>
+        <div class="slot" style="top: 540px; left: 1270px;"></div>
+        <div class="slot" style="top: 540px; left: 1170px;"></div>
+        <div class="slot" style="top: 540px; left: 1070px;"></div>
+        <div class="slot" style="top: 540px; left: 970px;"></div>
+        <div class="slot" style="top: 540px; left: 870px;"></div>
+        <div class="slot" style="top: 540px; left: 770px;"></div>
+        <div class="slot" style="top: 540px; left: 670px;"></div>
+        <div class="slot" style="top: 540px; left: 570px;"></div>
+        <div class="slot" style="top: 335px; left: 100px;"></div>
+        <div class="slot" style="top: 335px; left: 200px;"></div>
+        <div class="slot" style="top: 335px; left: 400px;"></div>
+        <div class="slot" style="top: 535px; left: 400px;"></div>
+        <div class="slot" style="top: 25px; left: 400px;"></div>
+        <div class="slot" style="top: 25px; left: 200px;"></div>
+        <div class="slot" style="top: 25px; left: 100px;"></div>
+        <div class="slot" style="top: 25px; left: 600px;"></div>
+
+        <div style="position: absolute; top: 70px; left: 1500px; font-size: 60px;">
+            🌲
+        </div>
+        <div style="position: absolute; top: 70px; left: 1450px; font-size: 60px;">
+            🌲
+        </div>
+        <div style="position: absolute; top: 70px; left: 700px; font-size: 60px;">
+            🌲
+        </div>
+        <div style="position: absolute; top: 250px; left: 720px; font-size: 60px;">
+            🌲
+        </div>
+        <div style="position: absolute; top: 300px; left: 670px; font-size: 60px;">
+            🌲
+        </div>
+        <div style="position: absolute; top: 450px; left: 680px; font-size: 60px;">
+            🌲
+        </div>
+        <div style="position: absolute; top: 520px; left: 200px; font-size: 60px;">
+            🌲
+        </div>
+        <div style="position: absolute; top: 520px; left: 140px; font-size: 60px;">
+            🌲
+        </div>
+        <div style="position: absolute; top: 530px; left: 100px; font-size: 60px;">
+            🌲
+        </div>
+        <div style="position: absolute; top: 450px; left: 20px; font-size: 60px;">
+            🌲
+        </div>
+        <div style="position: absolute; top: 250px; left: 20px; font-size: 60px;">
+            🌲
+        </div>
+        <div style="position: absolute; top: 100px; left: 25px; font-size: 60px;">
+            🌲
+        </div>
+        <div style="position: absolute; top: 20px; left: 1600px; font-size: 60px;">
+            🌲
+        </div>
+        <div style="position: absolute; top: 300px; left: 1600px; font-size: 80px;">
+            🎡
+        </div>
+    </div>
+
+    <script>
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+        }
+
+
+
+        let saldo = 4000;
+        const houseCost = 1000, luxuryCost = 2000;
+        const cafeCost = 1500, townhallCost = 3000, cinemaCost = 2500;
+        const itCost = 1800, schoolCost = 2200;
+        const bookstoreCost = 1600, partyCost = 1700;
+        const supermarketCost = 2300, museumCost = 2400;
+
+
+
+        const placedSlots = [];
+
+        const moneyDisplay = document.getElementById('money');
+        const slots = document.querySelectorAll('.slot');
+
+        const icons = {
+            house: document.getElementById('houseIcon'),
+            luxury: document.getElementById('luxuryIcon'),
+            cafe: document.getElementById('cafeIcon'),
+            townhall: document.getElementById('townhallIcon'),
+            cinema: document.getElementById('cinemaIcon'),
+            it: document.getElementById('itIcon'),
+            school: document.getElementById('schoolIcon'),
+            bookstore: document.getElementById('bookstoreIcon'),
+            party: document.getElementById('partyIcon'),
+            supermarket: document.getElementById('supermarketIcon'),
+            museum: document.getElementById('museumIcon'),
+        };
+
+        for (const [key, icon] of Object.entries(icons)) {
+            icon.addEventListener('dragstart', e => {
+                e.dataTransfer.setData('text/plain', key);
+            });
+        }
+
+        slots.forEach(slot => {
+            slot.addEventListener('dragover', e => e.preventDefault());
+            slot.addEventListener('drop', e => {
+                e.preventDefault();
+                const type = e.dataTransfer.getData('text/plain');
+                if (!slot.textContent) {
+                    let costMap = {
+                        house: houseCost,
+                        luxury: luxuryCost,
+                        cafe: cafeCost,
+                        townhall: townhallCost,
+                        cinema: cinemaCost,
+                        it: itCost,
+                        school: schoolCost,
+                        bookstore: bookstoreCost,
+                        party: partyCost,
+                        supermarket: supermarketCost,
+                        museum: museumCost
+                    };
+
+
+                    let emojiMap = {
+                        house: '🏠',
+                        luxury: '🏡',
+                        cafe: '☕',
+                        townhall: '🏛️',
+                        cinema: '🎬',
+                        it: '💻',
+                        school: '🏫',
+                        bookstore: '📚',
+                        party: '🎉',
+                        supermarket: '🛒',
+                        museum: '🖼️'
+                    };
+
+
+                    let cost = costMap[type];
+                    let emoji = emojiMap[type];
+                    if (saldo >= cost) {
+                        slot.textContent = emoji;
+                        saldo -= cost;
+                        placedSlots.push({ slot, type });
+                        updateMoney();
+                    } else {
+                        alert('Niet genoeg saldo om dit gebouw te kopen!');
+                    }
+                }
+            });
+        });
+
+        function updateMoney() {
+            moneyDisplay.textContent = `Saldo: €${saldo}`;
+        }
+
+        setInterval(() => {
+            placedSlots.forEach(item => {
+                switch (item.type) {
+                    case 'house': saldo += 500; break;
+                    case 'luxury': saldo += 1000; break;
+                    case 'cafe': saldo += 700; break;
+                    case 'cinema': saldo += 1200; break;
+                    case 'it': saldo += 850; break;
+                    case 'school': saldo += 600; break;
+                    case 'bookstore': saldo += 750; break;
+                    case 'party': saldo += 800; break;
+                    case 'supermarket': saldo += 1100; break;
+                    case 'museum': saldo += 950; break;
+                    // stadhuis levert niets op
+                }
+            });
+            updateMoney();
+        }, 10000);
+
+
+    </script>
+</body>
+
+</html>
